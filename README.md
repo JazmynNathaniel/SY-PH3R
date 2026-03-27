@@ -161,6 +161,53 @@ SY-PH3R is designed with a **privacy-first, minimal-backend approach**.
 - Make tradeoffs explicit and documented
 - Prioritize clarity over cleverness
 
+
+## 🚧 Roadmap (Early)
+
+- [ ] Core chat interface
+- [ ] Invite + onboarding flow
+- [ ] Device identity + verification
+- [ ] Local encrypted storage layer
+- [ ] Message lifecycle (send/receive/delete)
+- [ ] Disappearing messages
+- [ ] Member management (max 5 enforcement)
+- [ ] Profile customization system (safe templates)
+- [ ] Session/device revocation
+- [ ] Minimal relay backend (if needed)
+
 ---
 
-## 📁 Project Structure (Example)
+## 🧩 Future Considerations
+
+- LAN-only or private network sync modes
+- Hardware-backed key storage
+- Advanced key rotation
+- Secure backup/export options (opt-in only)
+- Multi-device linking with verification
+- Threat model documentation
+
+---
+
+## ⚖️ Disclaimer
+
+SY-PH3R is designed to **increase privacy and reduce exposure**, but no system is completely immune to compromise.
+
+Risks still include:
+- compromised user devices
+- malicious or careless participants
+- insecure environments
+- physical device access
+
+Users should treat SY-PH3R as a **trusted tool**, not a guarantee.
+
+---
+
+## ✨ Brand Summary
+
+SY-PH3R is a **private, expressive communication space** where:
+- trust is intentional
+- conversation is meaningful
+- identity is personal
+- and privacy is respected
+
+> A modern cipher for real conversation.
