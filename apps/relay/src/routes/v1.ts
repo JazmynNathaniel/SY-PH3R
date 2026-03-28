@@ -1,11 +1,14 @@
 import type { FastifyPluginAsync } from "fastify";
 import { createPublicKey, verify } from "node:crypto";
+import { z } from "zod";
 import {
   createInviteSchema,
   createMessageEnvelopeSchema,
   deviceVerificationSchema,
   envelopeQuerySchema,
   inviteRedeemSchema,
+  memberProfileSchema,
+  deviceRecordSchema,
   revokeSessionSchema
 } from "@sy-ph3r/shared";
 import type { RelayStorage } from "../domain/storage";
@@ -13,6 +16,12 @@ import type { RelayStorage } from "../domain/storage";
 type RouteOptions = {
   storage: RelayStorage;
 };
+
+const operatorBootstrapProfileSchema = z.object({
+  secret: z.string().min(1),
+  member: memberProfileSchema,
+  device: deviceRecordSchema
+});
 
 export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) => {
   const { storage } = options;
@@ -24,36 +33,35 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
   };
 
   app.get("/v1/dev/bootstrap-session", async (_request, reply) => {
-    if (process.env.NODE_ENV === "production") {
-      return reply.code(403).send({ error: "Bootstrap session unavailable outside development." });
-    }
-
-    const issued = storage.issueSession("device_bootstrap_console");
-    if (!issued) {
-      return reply.code(404).send({ error: "Bootstrap device not found." });
-    }
-
-    return reply.code(201).send(issued);
+    return reply.code(410).send({ error: "Bootstrap session flow removed. Create the first profile explicitly." });
   });
 
-  app.post("/v1/operator/bootstrap-session", async (request, reply) => {
-    const payload = request.body as { secret?: string } | undefined;
+  app.post("/v1/operator/bootstrap-session", async (_request, reply) => {
+    return reply.code(410).send({ error: "Bootstrap session flow removed. Use operator bootstrap profile instead." });
+  });
+
+  app.post("/v1/operator/bootstrap-profile", async (request, reply) => {
+    const payload = operatorBootstrapProfileSchema.parse(request.body);
     const expectedSecret = process.env.OPERATOR_BOOTSTRAP_SECRET;
 
     if (!expectedSecret) {
       return reply.code(403).send({ error: "Operator bootstrap is not configured." });
     }
 
-    if (payload?.secret !== expectedSecret) {
+    if (payload.secret !== expectedSecret) {
       return reply.code(401).send({ error: "Operator secret rejected." });
     }
 
-    const issued = storage.issueSession("device_bootstrap_console");
-    if (!issued) {
-      return reply.code(404).send({ error: "Bootstrap device not found." });
+    if (storage.listRoomMembers().length > 0) {
+      return reply.code(409).send({ error: "The first profile already exists." });
     }
 
-    return reply.code(201).send(issued);
+    const created = storage.createInitialProfile(payload.member, payload.device);
+    if (!created) {
+      return reply.code(400).send({ error: "Could not create the first profile." });
+    }
+
+    return reply.code(201).send(created);
   });
 
   app.post("/v1/invites", { preHandler: requireSession }, async (request, reply) => {

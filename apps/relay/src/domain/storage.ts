@@ -28,6 +28,7 @@ type RedeemInviteResult = {
 
 export type RelayStorage = {
   createInvite(input: CreateInviteInput, createdByMemberId: string): InviteRecord;
+  createInitialProfile(member: MemberProfile, device: DeviceRecord): { member: MemberProfile; device: DeviceRecord; session: SessionRecord; auth: SessionAuth } | null;
   redeemInvite(code: string, member: MemberProfile, device: DeviceRecord): RedeemInviteResult | null;
   getDevice(deviceId: string): DeviceRecord | null;
   verifyDevice(event: Omit<DeviceVerificationEvent, "id" | "createdAt">): DeviceVerificationEvent | null;
@@ -238,6 +239,30 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
     }
   );
 
+  const createInitialProfileTransaction = db.transaction(
+    (member: MemberProfile, device: DeviceRecord) => {
+      const roomMemberCount = db.prepare("SELECT COUNT(*) AS count FROM members").get() as { count: number };
+      if (roomMemberCount.count > 0) {
+        return null;
+      }
+
+      insertMember.run(member);
+      insertDevice.run(device);
+
+      const issued = issueSessionInternal(device.id);
+      if (!issued) {
+        return null;
+      }
+
+      return {
+        member,
+        device,
+        session: issued.session,
+        auth: issued.auth
+      };
+    }
+  );
+
   return {
     createInvite(input, createdByMemberId) {
       const invite: InviteRecord = {
@@ -250,6 +275,9 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
 
       insertInvite.run(invite);
       return invite;
+    },
+    createInitialProfile(member, device) {
+      return createInitialProfileTransaction(member, device);
     },
     redeemInvite(code, member, device) {
       return redeemInviteTransaction(code, member, device);
@@ -427,24 +455,6 @@ function seedBootstrapState(db: Database.Database) {
       VALUES ('room_main', 'The Quiet Room', 5)
     `).run();
   }
-
-  const memberCount = db.prepare("SELECT COUNT(*) AS count FROM members").get() as { count: number };
-  if (memberCount.count > 0) {
-    return;
-  }
-
-  db.prepare(`
-    INSERT INTO members (id, display_name, handle, accent, layout, photo_url, badge)
-    VALUES ('member_bootstrap', 'Operator', 'operator', 'sea-glow', 'signal', '', 'verified')
-  `).run();
-
-  db.prepare(`
-    INSERT INTO devices (id, member_id, label, verification_method, public_key, verified_at, revoked_at)
-    VALUES ('device_bootstrap_console', 'member_bootstrap', 'Bootstrap Console', 'code', @publicKey, @verifiedAt, NULL)
-  `).run({
-    publicKey: "bootstrap-public-key-placeholder",
-    verifiedAt: new Date().toISOString()
-  });
 }
 
 function hashToken(token: string) {
