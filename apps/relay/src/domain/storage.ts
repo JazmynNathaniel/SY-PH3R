@@ -435,12 +435,12 @@ function seedBootstrapState(db: Database.Database) {
 
   db.prepare(`
     INSERT INTO members (id, display_name, handle, accent, layout, photo_url, badge)
-    VALUES ('member_iris', 'Iris', 'observer', 'sea-glow', 'constellation', '', 'verified')
+    VALUES ('member_bootstrap', 'Operator', 'operator', 'sea-glow', 'signal', '', 'verified')
   `).run();
 
   db.prepare(`
     INSERT INTO devices (id, member_id, label, verification_method, public_key, verified_at, revoked_at)
-    VALUES ('device_iris_studio', 'member_iris', 'Iris / Studio Mac', 'qr', @publicKey, @verifiedAt, NULL)
+    VALUES ('device_bootstrap_console', 'member_bootstrap', 'Bootstrap Console', 'code', @publicKey, @verifiedAt, NULL)
   `).run({
     publicKey: "bootstrap-public-key-placeholder",
     verifiedAt: new Date().toISOString()

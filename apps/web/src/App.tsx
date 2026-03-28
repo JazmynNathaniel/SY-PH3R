@@ -1423,10 +1423,6 @@ function resolveSenderLabel(senderDeviceId: string, pendingDevice: DeviceRecord 
     return "You";
   }
 
-  if (senderDeviceId === "device_iris_studio") {
-    return "Iris";
-  }
-
   return "Circle member";
 }
 

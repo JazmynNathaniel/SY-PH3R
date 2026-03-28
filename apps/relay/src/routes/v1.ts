@@ -28,7 +28,7 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
       return reply.code(403).send({ error: "Bootstrap session unavailable outside development." });
     }
 
-    const issued = storage.issueSession("device_iris_studio");
+    const issued = storage.issueSession("device_bootstrap_console");
     if (!issued) {
       return reply.code(404).send({ error: "Bootstrap device not found." });
     }
@@ -48,7 +48,7 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
       return reply.code(401).send({ error: "Operator secret rejected." });
     }
 
-    const issued = storage.issueSession("device_iris_studio");
+    const issued = storage.issueSession("device_bootstrap_console");
     if (!issued) {
       return reply.code(404).send({ error: "Bootstrap device not found." });
     }
