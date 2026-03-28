@@ -571,6 +571,58 @@ function App() {
   const currentMember = members.find((member) => member.id === pendingDevice?.memberId) ?? members[0] ?? null;
   const selectedDirectName = dmState.recipientId ? resolveMemberName(members, dmState.recipientId) : "No member selected";
   const activePreset = UI_THEME_PRESETS.find((preset) => preset.id === activeTheme) ?? UI_THEME_PRESETS[0];
+  const activeView = sessionReady ? view : "getting-started";
+  const navItems = [
+    { id: "home", label: "Home" },
+    { id: "getting-started", label: "Getting Started" },
+    { id: "room", label: "Chat" },
+    { id: "direct", label: "Direct Messages" },
+    { id: "identity", label: "Profile" },
+    { id: "security", label: "Settings" }
+  ];
+
+  if (!sessionReady) {
+    return (
+      <AppShell theme={activeTheme}>
+        {!appReady ? <LoadingScreen /> : null}
+        <section className="mx-auto grid min-h-[70vh] w-full max-w-[720px] place-items-center">
+          <CalmPanel title="Log in to enter" subtitle="Use your invite code to step inside the circle.">
+            <div className="grid gap-6">
+              <form className="grid gap-3" onSubmit={handleRedeemSubmit}>
+                <Field label="Invite code">
+                  <input
+                    className="sy-input sy-code-text"
+                    value={redeemForm.code}
+                    onChange={(event) => setRedeemForm((current) => ({ ...current, code: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Display name">
+                  <input
+                    className="sy-input"
+                    value={redeemForm.displayName}
+                    onChange={(event) =>
+                      setRedeemForm((current) => ({ ...current, displayName: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="This device name">
+                  <input
+                    className="sy-input"
+                    value={redeemForm.deviceLabel}
+                    onChange={(event) =>
+                      setRedeemForm((current) => ({ ...current, deviceLabel: event.target.value }))
+                    }
+                  />
+                </Field>
+                <ActionButton pending={isPending} label="Log in to enter" pendingLabel="Entering..." />
+              </form>
+              {errorMessage ? <p className="text-sm text-amber-200">{errorMessage}</p> : null}
+            </div>
+          </CalmPanel>
+        </section>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell theme={activeTheme}>
@@ -605,19 +657,12 @@ function App() {
         </div>
       </motion.header>
       <ViewTabs
-        items={[
-          { id: "home", label: "Home" },
-          { id: "getting-started", label: "Getting Started" },
-          { id: "room", label: "Chat" },
-          { id: "direct", label: "Direct Messages" },
-          { id: "identity", label: "Profile" },
-          { id: "security", label: "Settings" }
-        ]}
-        view={view}
+        items={navItems}
+        view={activeView}
         onChange={setView}
       />
 
-      {view === "home" ? (
+      {activeView === "home" ? (
         <section className="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
           <CalmPanel title="Home" subtitle="Your private space">
             <div className="grid gap-6">
@@ -630,9 +675,9 @@ function App() {
                 <ActionCard title="Open chat" description="Everyone in one room" onClick={() => setView("room")} />
                 <ActionCard title="Direct messages" description="One person at a time" onClick={() => setView("direct")} />
                 <ActionCard
-                  title={sessionReady ? "Invite someone" : "Join the circle"}
-                  description={sessionReady ? "Create and share a new invite." : "Use your invite code to get inside."}
-                  onClick={() => setView("getting-started")}
+                  title={sessionReady ? "Open circle" : "Join the circle"}
+                  description={sessionReady ? "See who is inside and manage invites." : "Use your invite code to get inside."}
+                  onClick={() => setView(sessionReady ? "security" : "getting-started")}
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-3">
@@ -677,9 +722,9 @@ function App() {
         </section>
       ) : null}
 
-      {view === "getting-started" ? (
+      {activeView === "getting-started" ? (
         <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
-          <CalmPanel title="Getting Started" subtitle="Choose your role first">
+          <CalmPanel title="Getting Started" subtitle="Join the circle and step straight into chat">
             <div className="grid gap-6">
               <div className="sy-info-card rounded-[24px] p-5">
                 <p className="sy-terminal-label">SOPM</p>
@@ -698,45 +743,26 @@ function App() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="sy-step-card rounded-[24px] px-5 py-5">
-                  <p className="sy-terminal-label">I Have An Invite</p>
-                  <div className="mt-4 grid gap-3">
-                    {[
-                      "Paste your invite code.",
-                      "Choose your display name and this device name.",
-                      "Join the circle.",
-                      "You are taken straight into chat."
-                    ].map((step, index) => (
-                      <div key={step} className="flex items-start gap-4">
-                        <div className="sy-step-index">{index + 1}</div>
-                        <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="sy-step-card rounded-[24px] px-5 py-5">
-                  <p className="sy-terminal-label">I Need To Invite Someone</p>
-                  <div className="mt-4 grid gap-3">
-                    {[
-                      "Create the invite.",
-                      "Copy the invite link or message.",
-                      "Send it out-of-band.",
-                      "The new member joins and appears in the circle."
-                    ].map((step, index) => (
-                      <div key={step} className="flex items-start gap-4">
-                        <div className="sy-step-index">{index + 1}</div>
-                        <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
-                      </div>
-                    ))}
-                  </div>
+              <div className="sy-step-card rounded-[24px] px-5 py-5">
+                <p className="sy-terminal-label">Join Flow</p>
+                <div className="mt-4 grid gap-3">
+                  {[
+                    "Paste your invite code.",
+                    "Choose your display name and this device name.",
+                    "Join the circle.",
+                    "You are taken straight into chat."
+                  ].map((step, index) => (
+                    <div key={step} className="flex items-start gap-4">
+                      <div className="sy-step-index">{index + 1}</div>
+                      <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </CalmPanel>
 
-          <CalmPanel title="Join Or Invite" subtitle="Do the one that matches your role">
+          <CalmPanel title="Join The Circle" subtitle="Use your invite code and step straight inside">
             <div className="grid gap-6">
               <div className="grid gap-4">
                 <SectionHeader title="Join the circle" subtitle="Use your invite code and step straight inside." />
@@ -770,43 +796,6 @@ function App() {
                 </form>
               </div>
 
-              <div className="grid gap-4">
-                <SectionHeader title="Invite someone" subtitle="Create the invite, then hand it off immediately." />
-                <form className="grid gap-3" onSubmit={handleCreateInviteSubmit}>
-                  <Field label="Invite label">
-                    <input
-                      className="sy-input"
-                      value={inviteForm.label}
-                      onChange={(event) => setInviteForm((current) => ({ ...current, label: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Expiry">
-                    <input
-                      className="sy-input"
-                      type="datetime-local"
-                      value={inviteForm.expiresAt}
-                      onChange={(event) => setInviteForm((current) => ({ ...current, expiresAt: event.target.value }))}
-                    />
-                  </Field>
-                  <ActionButton pending={isPending} label="Create invite" pendingLabel="Creating..." />
-                </form>
-                {createdInvite ? (
-                  <div className="grid gap-3">
-                    <ResultBlock
-                      title={createdInvite.label}
-                      body={createdInvite.code}
-                      meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`}
-                    />
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <CyberButton label="Copy code" onClick={handleCopyInviteCode} />
-                      <CyberButton label="Copy invite message" onClick={handleCopyInviteMessage} />
-                      <CyberButton label="Copy invite link" onClick={handleCopyInviteLink} />
-                    </div>
-                    {inviteShareStatus ? <p className="text-sm text-text-secondary">{inviteShareStatus}</p> : null}
-                  </div>
-                ) : null}
-              </div>
-
               <div className="grid gap-4 md:grid-cols-3">
                 <ActionCard title="Open chat" description="Go to the shared conversation." onClick={() => setView("room")} />
                 <ActionCard title="Open direct messages" description="Start a private conversation." onClick={() => setView("direct")} />
@@ -817,7 +806,7 @@ function App() {
         </section>
       ) : null}
 
-      {view === "room" ? (
+      {activeView === "room" ? (
         <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <div className="grid content-start gap-4">
             <CalmPanel title="Members" subtitle="Everyone in the room">
@@ -913,7 +902,7 @@ function App() {
         </section>
       ) : null}
 
-      {view === "direct" ? (
+      {activeView === "direct" ? (
         <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <div className="grid content-start gap-4">
             <CalmPanel title="Start a chat" subtitle="Choose a person">
@@ -1019,7 +1008,7 @@ function App() {
         </section>
       ) : null}
 
-      {view === "identity" ? (
+      {activeView === "identity" ? (
         <section className="grid gap-6 xl:grid-cols-[0.84fr_1.16fr]">
           <CalmPanel title="Profile" subtitle="People in your circle">
             <div className="grid gap-4 md:grid-cols-2">
@@ -1070,7 +1059,7 @@ function App() {
         </section>
       ) : null}
 
-      {view === "security" ? (
+      {activeView === "security" ? (
         <section className="grid gap-6 xl:grid-cols-2">
           <CalmPanel title="Settings" subtitle="Invites and devices">
             <div className="grid gap-6 lg:grid-cols-2">
