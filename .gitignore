@@ -3,6 +3,7 @@ dist/
 .turbo/
 .vite/
 coverage/
+AGENTS.md
 .env
 .env.local
 .env.*.local
