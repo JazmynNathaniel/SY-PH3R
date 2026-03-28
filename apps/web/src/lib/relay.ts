@@ -8,7 +8,7 @@ import type {
   SessionRecord
 } from "@sy-ph3r/shared";
 
-const RELAY_URL = import.meta.env.VITE_RELAY_URL ?? "http://127.0.0.1:4300";
+const RELAY_URL = import.meta.env.VITE_RELAY_URL ?? (import.meta.env.DEV ? "http://127.0.0.1:4300" : "");
 const SESSION_STORAGE_KEY = "sy-ph3r.sessionToken";
 
 type RedeemInvitePayload = {
@@ -111,6 +111,10 @@ type RequestInitWithAuth = RequestInit & {
 };
 
 async function request<T>(path: string, init?: RequestInitWithAuth) {
+  if (!RELAY_URL) {
+    throw new Error("Missing VITE_RELAY_URL. Set the relay URL in your deployment environment.");
+  }
+
   const token = init?.auth ? getSessionToken() : null;
   const { auth: _auth, ...requestInit } = init ?? {};
   const response = await fetch(`${RELAY_URL}${path}`, {

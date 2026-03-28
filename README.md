@@ -43,6 +43,16 @@ packages/
   shared/     Shared types, limits, and domain contracts
 ```
 
+## Deployment Summary
+
+- Frontend deploy target: Vercel
+- Frontend app: `apps/web`
+- Shared workspace dependency: `packages/shared`
+- Relay boundary: separate service from the Vercel-hosted frontend
+- Required frontend env var: `VITE_RELAY_URL`
+
+Vercel configuration is defined in `vercel.json`. Frontend deployment notes are documented in `docs/deployment.md`.
+
 ## MVP Scope
 
 - Invite-only onboarding for up to five total members
@@ -114,3 +124,4 @@ packages/
 - This MVP scaffold is encryption-ready, not yet a full audited secure messenger.
 - For a serious production deployment, add independent security review, key backup strategy, abuse recovery planning, and stronger transport authentication.
 - If mobile clients are required, a native secure-storage strategy should be chosen before broad rollout.
+- For Vercel deployment, do not put relay secrets into client-side `VITE_*` variables. Keep server-only configuration on the relay deployment.
