@@ -34,7 +34,6 @@ import {
   fetchEnvelopes,
   fetchMainRoom,
   getSessionToken,
-  operatorBootstrapSession,
   redeemInvite,
   sendEnvelope,
   setSessionToken,
@@ -210,7 +209,6 @@ function App() {
   const [statusMessage, setStatusMessage] = useState("Connecting");
   const [errorMessage, setErrorMessage] = useState("");
   const [sessionReady, setSessionReady] = useState(Boolean(getSessionToken()));
-  const [operatorSecret, setOperatorSecret] = useState("");
   const [vaultPassphrase, setVaultPassphrase] = useState("");
   const [vaultState, setVaultState] = useState<DraftVaultState>(EMPTY_DRAFT_VAULT);
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
@@ -401,26 +399,6 @@ function App() {
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(toMessage(error));
-      }
-    });
-  }
-
-  function handleOperatorBootstrap(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    startTransition(async () => {
-      try {
-        await operatorBootstrapSession(operatorSecret);
-        setSessionReady(true);
-        setOperatorSecret("");
-        setStatusMessage("Founding session active");
-        setErrorMessage("");
-        await refreshMessages(roomSecret);
-        if (dmState.recipientId) {
-          await refreshDirectMessages(dmState.recipientId, dmState.secret);
-        }
-      } catch (error) {
-        setErrorMessage(toMessage(error));
-        setStatusMessage("Invite required");
       }
     });
   }
@@ -1099,19 +1077,6 @@ function App() {
           <CalmPanel title="Settings" subtitle="Invites and devices">
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                {!sessionReady ? (
-                  <form className="mb-6 grid gap-3" onSubmit={handleOperatorBootstrap}>
-                    <Field label="Operator bootstrap secret">
-                      <input
-                        className="sy-input"
-                        type="password"
-                        value={operatorSecret}
-                        onChange={(event) => setOperatorSecret(event.target.value)}
-                      />
-                    </Field>
-                    <ActionButton pending={isPending} label="Unlock founding session" pendingLabel="Unlocking..." />
-                  </form>
-                ) : null}
                 <form className="grid gap-3" onSubmit={handleCreateInviteSubmit}>
                   <Field label="Invite label">
                     <input

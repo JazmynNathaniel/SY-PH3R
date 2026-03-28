@@ -103,5 +103,21 @@ Notes:
 
 - Render provides `PORT` automatically for web services.
 - `HOST` must be `0.0.0.0` so the service binds to Render's network interface.
-- `OPERATOR_BOOTSTRAP_SECRET` is used once from the frontend security screen to acquire the founding session and issue the first invites.
+- `OPERATOR_BOOTSTRAP_SECRET` is for a one-time operator-only bootstrap request and should never be exposed in the public frontend UI.
 - `DB_PATH` points at a local SQLite file; attach a persistent disk if you want relay data to survive redeploys or restarts.
+
+One-time operator bootstrap:
+
+```bash
+curl -X POST https://your-relay-service.example.com/v1/operator/bootstrap-session \
+  -H "content-type: application/json" \
+  -d '{"secret":"<OPERATOR_BOOTSTRAP_SECRET>"}'
+```
+
+Take the returned `auth.token` and set it in the browser session storage for the frontend origin:
+
+```js
+sessionStorage.setItem("sy-ph3r.sessionToken", "<returned auth.token>")
+```
+
+Reload the app after setting the token.
