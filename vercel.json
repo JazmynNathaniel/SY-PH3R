@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
+  "installCommand": "npm ci --workspaces --include-workspace-root",
   "buildCommand": "npm run build --workspace @sy-ph3r/web",
-  "outputDirectory": "apps/web/dist",
-  "framework": "vite"
+  "outputDirectory": "apps/web/dist"
 }

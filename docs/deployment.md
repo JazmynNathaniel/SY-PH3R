@@ -34,12 +34,11 @@ The backend boundary remains relay-only: readable message plaintext should never
 
 Root config is defined in `vercel.json`.
 
-- framework: `vite`
-- install command: `npm install`
+- install command: `npm ci --workspaces --include-workspace-root`
 - build command: `npm run build --workspace @sy-ph3r/web`
 - output directory: `apps/web/dist`
 
-This allows Vercel to build the frontend from the monorepo root while still resolving the shared workspace package.
+This keeps the build pinned to the monorepo root and makes npm workspace resolution explicit, which is required so `apps/web` can resolve `packages/shared` and the frontend dependency graph consistently on Vercel.
 
 ## Environment Variables
 

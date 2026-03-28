@@ -2,6 +2,7 @@
   "name": "sy-ph3r",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.9.0",
   "description": "SY-PH3R secure private communication MVP scaffold",
   "workspaces": [
     "apps/*",
@@ -19,4 +20,3 @@
     "node": ">=20.11"
   }
 }
-
