@@ -186,6 +186,7 @@ function App() {
   const [inviteForm, setInviteForm] = useState<CreateInviteForm>(initialInviteForm);
   const [redeemForm, setRedeemForm] = useState<RedeemInviteForm>(initialRedeemForm);
   const [createdInvite, setCreatedInvite] = useState<InviteRecord | null>(null);
+  const [inviteShareStatus, setInviteShareStatus] = useState("");
   const [pendingDevice, setPendingDevice] = useState<DeviceRecord | null>(null);
   const [statusMessage, setStatusMessage] = useState("Connecting");
   const [errorMessage, setErrorMessage] = useState("");
@@ -211,6 +212,11 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const inviteCode = new URLSearchParams(window.location.search).get("invite");
+    if (inviteCode) {
+      setRedeemForm((current) => ({ ...current, code: inviteCode }));
+      setView("getting-started");
+    }
 
     void (async () => {
       const startedAt = Date.now();
@@ -364,6 +370,7 @@ function App() {
         });
 
         setCreatedInvite(invite);
+        setInviteShareStatus("Invite ready to share");
         setRedeemForm((current) => ({ ...current, code: invite.code }));
         setStatusMessage("Invite created");
         setErrorMessage("");
@@ -371,6 +378,42 @@ function App() {
         setErrorMessage(toMessage(error));
       }
     });
+  }
+
+  function handleCopyInviteCode() {
+    if (!createdInvite) {
+      return;
+    }
+
+    void copyToClipboard(createdInvite.code, "Invite code copied");
+  }
+
+  function handleCopyInviteMessage() {
+    if (!createdInvite) {
+      return;
+    }
+
+    const inviteLink = buildInviteLink(createdInvite.code);
+    const message = `You have been invited to join SY-PH3R.\nInvite code: ${createdInvite.code}\nJoin here: ${inviteLink}`;
+    void copyToClipboard(message, "Invite message copied");
+  }
+
+  function handleCopyInviteLink() {
+    if (!createdInvite) {
+      return;
+    }
+
+    void copyToClipboard(buildInviteLink(createdInvite.code), "Invite link copied");
+  }
+
+  async function copyToClipboard(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setInviteShareStatus(successMessage);
+      setErrorMessage("");
+    } catch {
+      setErrorMessage("Could not copy to clipboard on this device.");
+    }
   }
 
   function handleRedeemSubmit(event: FormEvent<HTMLFormElement>) {
@@ -694,11 +737,19 @@ function App() {
                   <ActionButton pending={isPending} label="Create invite" pendingLabel="Creating..." />
                 </form>
                 {createdInvite ? (
-                  <ResultBlock
-                    title={createdInvite.label}
-                    body={createdInvite.code}
-                    meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`}
-                  />
+                  <div className="grid gap-3">
+                    <ResultBlock
+                      title={createdInvite.label}
+                      body={createdInvite.code}
+                      meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`}
+                    />
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <CyberButton label="Copy code" onClick={handleCopyInviteCode} />
+                      <CyberButton label="Copy invite message" onClick={handleCopyInviteMessage} />
+                      <CyberButton label="Copy invite link" onClick={handleCopyInviteLink} />
+                    </div>
+                    {inviteShareStatus ? <p className="text-sm text-text-secondary">{inviteShareStatus}</p> : null}
+                  </div>
                 ) : null}
               </div>
 
@@ -1001,7 +1052,15 @@ function App() {
                   <ActionButton pending={isPending} label="Create invite" pendingLabel="Issuing..." />
                 </form>
                 {createdInvite ? (
-                    <ResultBlock title={createdInvite.label} body={createdInvite.code} meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`} />
+                    <div className="grid gap-3">
+                      <ResultBlock title={createdInvite.label} body={createdInvite.code} meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`} />
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <CyberButton label="Copy code" onClick={handleCopyInviteCode} />
+                        <CyberButton label="Copy invite message" onClick={handleCopyInviteMessage} />
+                        <CyberButton label="Copy invite link" onClick={handleCopyInviteLink} />
+                      </div>
+                      {inviteShareStatus ? <p className="text-sm text-text-secondary">{inviteShareStatus}</p> : null}
+                    </div>
                 ) : null}
               </div>
 
@@ -1327,6 +1386,12 @@ function resolveSenderLabel(senderDeviceId: string, pendingDevice: DeviceRecord 
 
 function getDirectSecret(recipientId: string) {
   return `sy-ph3r-dm-${recipientId}`;
+}
+
+function buildInviteLink(inviteCode: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("invite", inviteCode);
+  return url.toString();
 }
 
 function createHandle(displayName: string) {
