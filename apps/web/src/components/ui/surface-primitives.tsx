@@ -49,7 +49,7 @@ export function StatPanel({
   return (
     <div className="sy-panel rounded-[22px] p-4">
       <p className="sy-terminal-label">{label}</p>
-      <p className="mt-3 text-xl font-medium uppercase tracking-[0.12em] text-text-primary">{value}</p>
+      <p className="sy-emphasis-value mt-3">{value}</p>
       <p className="mt-2 text-sm text-text-secondary">{meta}</p>
     </div>
   );
@@ -65,7 +65,7 @@ export function ViewTabs<T extends string>({
   items: Array<{ id: T; label: string }>;
 }) {
   return (
-    <nav className="flex flex-wrap gap-3">
+    <nav className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
       {items.map((item) => {
         const active = item.id === view;
         return (
@@ -99,7 +99,7 @@ export function MiniSignal({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[18px] border border-border bg-background/40 px-4 py-3">
       <p className="sy-terminal-label">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-accent-primary">{value}</p>
+      <p className="sy-emphasis-value mt-2 text-accent-primary">{value}</p>
     </div>
   );
 }
@@ -115,7 +115,7 @@ export function ActionCard({
 }) {
   return (
     <button
-      className="sy-button-soft sy-card-button"
+      className="sy-button-soft sy-card-button min-h-[104px]"
       onClick={onClick}
       type="button"
     >
@@ -138,7 +138,7 @@ export function ThreadHeader({
     <div className="mb-5 rounded-[20px] border border-border bg-background/40 px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-medium text-text-primary">{title}</p>
+          <p className="sy-section-heading text-text-primary">{title}</p>
           <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
         </div>
         <span className="sy-meta text-accent-secondary">{meta}</span>
@@ -167,7 +167,7 @@ export function SectionHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-[0.04em] text-text-primary">{title}</h2>
+        <h2 className="sy-section-heading">{title}</h2>
         {subtitle ? <p className="text-sm text-text-secondary">{subtitle}</p> : null}
       </div>
       {aside ? <div className="flex flex-wrap items-center gap-2">{aside}</div> : null}
@@ -184,7 +184,7 @@ export function MemberPill({
 }) {
   return (
     <div className="sy-member-pill rounded-full px-3 py-2">
-      <p className="text-sm font-medium text-text-primary">{name}</p>
+      <p className="sy-section-heading text-text-primary">{name}</p>
       <p className="sy-meta">{meta}</p>
     </div>
   );
@@ -201,7 +201,7 @@ export function ComposerDock({
 }) {
   return (
     <div className="sy-composer-bar rounded-[24px] p-4">
-      <p className="mb-3 text-sm font-medium text-text-primary">{title}</p>
+      <p className="sy-section-heading mb-3 text-text-primary">{title}</p>
       <div className="grid gap-3">{children}</div>
       {footer ? <div className="mt-3">{footer}</div> : null}
     </div>

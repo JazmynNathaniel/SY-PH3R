@@ -15,26 +15,35 @@ export function BinaryBackdrop() {
     <div className="sy-backdrop">
       <motion.div
         className="sy-binary-layer pointer-events-none"
-        animate={{ backgroundPositionY: ["0%", "100%"], opacity: [0.18, 0.3, 0.18] }}
+        animate={{ backgroundPositionY: ["0%", "100%"], opacity: [0.34, 0.6, 0.34] }}
         transition={{
-          backgroundPositionY: { duration: 22, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
-          opacity: { duration: 4.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
+          backgroundPositionY: { duration: 16, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
+          opacity: { duration: 3.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
         }}
         style={{ backgroundSize: "100% 100%, 100% 180px" }}
       />
       <motion.div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_42%)]"
-        animate={{ opacity: [0.15, 0.32, 0.15] }}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(0deg, transparent, rgba(var(--accent-primary-rgb), 0.08), transparent), linear-gradient(90deg, transparent, rgba(var(--accent-secondary-rgb), 0.07), transparent)"
+        }}
+        animate={{ opacity: [0.24, 0.46, 0.24] }}
         transition={{ duration: 5.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
       <motion.div
-        className="pointer-events-none absolute inset-y-0 left-[14%] w-px bg-gradient-to-b from-transparent via-accent-primary/40 to-transparent"
-        animate={{ opacity: [0.2, 0.7, 0.2] }}
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_42%)]"
+        animate={{ opacity: [0.24, 0.5, 0.24] }}
+        transition={{ duration: 4.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="pointer-events-none absolute inset-y-0 left-[14%] w-px bg-gradient-to-b from-transparent via-accent-primary/70 to-transparent shadow-[0_0_16px_rgba(124,255,107,0.45)]"
+        animate={{ opacity: [0.34, 1, 0.34] }}
         transition={{ duration: 3.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
       <motion.div
-        className="pointer-events-none absolute inset-y-0 right-[18%] w-px bg-gradient-to-b from-transparent via-accent-secondary/40 to-transparent"
-        animate={{ opacity: [0.16, 0.62, 0.16] }}
+        className="pointer-events-none absolute inset-y-0 right-[18%] w-px bg-gradient-to-b from-transparent via-accent-secondary/70 to-transparent shadow-[0_0_16px_rgba(61,255,179,0.45)]"
+        animate={{ opacity: [0.3, 0.9, 0.3] }}
         transition={{ duration: 4.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
       />
       {columns.map((column) => (

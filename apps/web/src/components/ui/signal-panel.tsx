@@ -27,11 +27,10 @@ export function SignalPanel({
     >
       <div className="mb-4">
         {subtitle ? <p className="sy-terminal-label text-accent-secondary">{subtitle}</p> : null}
-        <h2 className="mt-2 text-2xl font-semibold tracking-[0.04em] text-text-primary">{title}</h2>
+        <h2 className="sy-section-heading mt-2">{title}</h2>
       </div>
       <div className="sy-divider mb-4 opacity-50" />
       {children}
     </motion.section>
   );
 }
-

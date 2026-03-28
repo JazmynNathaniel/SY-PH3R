@@ -26,6 +26,15 @@
   --panel-quiet: rgba(11, 15, 11, 0.82);
   --panel-soft: rgba(14, 18, 14, 0.72);
   --panel-chat: rgba(8, 11, 8, 0.72);
+  --panel-edge: rgba(124, 255, 107, 0.05);
+  --panel-glow: rgba(61, 255, 179, 0.08);
+  --chat-border: rgba(29, 42, 29, 0.72);
+  --chat-shadow: rgba(0, 0, 0, 0.24);
+  --message-border: rgba(29, 42, 29, 0.74);
+  --message-bg: rgba(14, 18, 14, 0.74);
+  --button-border: rgba(124, 255, 107, 0.18);
+  --button-hover-border: rgba(124, 255, 107, 0.34);
+  --button-glow: rgba(124, 255, 107, 0.06);
   --button-text: var(--accent-primary);
   --button-muted: var(--text-secondary);
   --shell-pulse: rgba(var(--accent-primary-rgb), 0);
@@ -142,21 +151,32 @@ body {
 }
 
 [data-theme="gridline"] {
-  --background: #050705;
-  --background-elevated: #0a100a;
-  --accent-primary: #8dff72;
-  --accent-secondary: #6fffd3;
-  --accent-primary-rgb: 141, 255, 114;
-  --accent-secondary-rgb: 111, 255, 211;
-  --shell-glow-1: rgba(111, 255, 211, 0.18);
-  --shell-glow-2: rgba(141, 255, 114, 0.28);
-  --shell-haze: rgba(141, 255, 114, 0.1);
-  --grid-line: rgba(141, 255, 114, 0.12);
-  --scan-line: rgba(141, 255, 114, 0.06);
-  --panel-base: rgba(14, 26, 14, 0.9);
-  --panel-base-2: rgba(14, 26, 16, 0.86);
-  --panel-soft: rgba(14, 22, 14, 0.78);
-  --shell-pulse: rgba(141, 255, 114, 0.06);
+  --background: #08040d;
+  --background-elevated: #12081a;
+  --accent-primary: #ff4fd8;
+  --accent-secondary: #9f6bff;
+  --accent-primary-rgb: 255, 79, 216;
+  --accent-secondary-rgb: 159, 107, 255;
+  --shell-glow-1: rgba(159, 107, 255, 0.24);
+  --shell-glow-2: rgba(255, 79, 216, 0.28);
+  --shell-haze: rgba(255, 79, 216, 0.12);
+  --grid-line: rgba(255, 79, 216, 0.12);
+  --scan-line: rgba(159, 107, 255, 0.07);
+  --panel-base: rgba(28, 12, 36, 0.92);
+  --panel-base-2: rgba(24, 11, 34, 0.88);
+  --panel-quiet: rgba(19, 9, 28, 0.86);
+  --panel-soft: rgba(26, 12, 34, 0.8);
+  --panel-chat: rgba(17, 8, 23, 0.78);
+  --panel-edge: rgba(255, 79, 216, 0.14);
+  --panel-glow: rgba(159, 107, 255, 0.2);
+  --chat-border: rgba(255, 79, 216, 0.24);
+  --chat-shadow: rgba(159, 107, 255, 0.2);
+  --message-border: rgba(255, 79, 216, 0.26);
+  --message-bg: rgba(28, 12, 38, 0.76);
+  --button-border: rgba(255, 79, 216, 0.24);
+  --button-hover-border: rgba(159, 107, 255, 0.48);
+  --button-glow: rgba(255, 79, 216, 0.18);
+  --shell-pulse: rgba(255, 79, 216, 0.08);
   --shell-radius: 20px;
   --shell-cut: 10px;
   --panel-radius: 18px;
@@ -417,9 +437,13 @@ option {
 }
 
 .sy-chat-feed {
-  border: 1px solid rgba(29, 42, 29, 0.72);
+  border: 1px solid var(--chat-border);
   background: var(--panel-chat);
   border-radius: calc(var(--panel-radius) - 2px);
+  padding-bottom: 1.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 16px 36px var(--chat-shadow);
 }
 
 .sy-chat-feed::-webkit-scrollbar {
@@ -474,9 +498,9 @@ option {
 
 .sy-panel-glow {
   box-shadow:
-    inset 0 0 0 1px rgba(124, 255, 107, 0.05),
-    0 0 0 1px rgba(124, 255, 107, 0.06),
-    0 0 30px rgba(61, 255, 179, 0.08),
+    inset 0 0 0 1px var(--panel-edge),
+    0 0 0 1px var(--panel-edge),
+    0 0 30px var(--panel-glow),
     var(--shadow);
 }
 
@@ -500,11 +524,50 @@ option {
 
 .sy-terminal-label {
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   color: var(--accent-primary);
+}
+
+.sy-brand-mark {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: clamp(1.35rem, 1.16rem + 0.5vw, 1.9rem);
+  color: var(--accent-primary);
+}
+
+.sy-display-heading {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: clamp(1.15rem, 1.02rem + 0.46vw, 1.55rem);
+  line-height: 1.12;
+  color: color-mix(in srgb, var(--accent-secondary) 42%, var(--text-primary));
+}
+
+.sy-section-heading {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: clamp(0.86rem, 0.82rem + 0.22vw, 1rem);
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--accent-secondary) 28%, var(--text-primary));
+}
+
+.sy-emphasis-value {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: clamp(0.86rem, 0.82rem + 0.24vw, 1rem);
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--accent-secondary) 18%, var(--text-primary));
 }
 
 .sy-code-text {
@@ -597,7 +660,7 @@ option {
   position: relative;
   z-index: 1;
   border-radius: 20px;
-  border: 1px solid rgba(124, 255, 107, 0.18);
+  border: 1px solid var(--button-border);
   background:
     linear-gradient(180deg, rgba(124, 255, 107, 0.05), rgba(124, 255, 107, 0.02)),
     rgba(11, 15, 11, 0.72);
@@ -610,22 +673,25 @@ option {
 }
 
 .sy-button-soft:hover {
-  border-color: rgba(124, 255, 107, 0.34);
+  border-color: var(--button-hover-border);
   background:
     linear-gradient(180deg, rgba(124, 255, 107, 0.08), rgba(124, 255, 107, 0.03)),
     rgba(11, 15, 11, 0.82);
-  box-shadow: 0 0 20px rgba(124, 255, 107, 0.06);
+  box-shadow: 0 0 20px var(--button-glow);
   transform: translateY(-1px);
 }
 
 .sy-nav-tab {
-  min-height: 2.25rem;
-  padding: 0.42rem 0.72rem;
+  min-height: 2.75rem;
+  width: 100%;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
   font-family: var(--font-sans);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .sy-button-soft-active {
@@ -649,17 +715,17 @@ option {
 
 .sy-card-button-title {
   font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--accent-primary);
 }
 
 .sy-card-button-body {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-  line-height: 1.7;
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.55;
   color: var(--text-secondary);
 }
 
@@ -696,8 +762,8 @@ option {
 
 .sy-theme-card-title {
   font-family: var(--font-sans);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1.2;
@@ -706,8 +772,8 @@ option {
 
 .sy-theme-card-body {
   margin-top: 0.45rem;
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.7rem;
+  line-height: 1.45;
   color: var(--text-secondary);
 }
 
@@ -741,36 +807,40 @@ option {
 }
 
 .sy-message-card {
-  border: 1px solid rgba(29, 42, 29, 0.74);
-  background: rgba(14, 18, 14, 0.74);
+  border: 1px solid var(--message-border);
+  background: var(--message-bg);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
   border-radius: var(--message-radius);
+  max-width: 100%;
 }
 
 .sy-noise {
   position: absolute;
   inset: 0;
-  opacity: 0.04;
+  opacity: 0.07;
   pointer-events: none;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(124, 255, 107, 0.24) 0, transparent 18%),
-    radial-gradient(circle at 80% 30%, rgba(61, 255, 179, 0.22) 0, transparent 18%),
-    radial-gradient(circle at 50% 80%, rgba(124, 255, 107, 0.14) 0, transparent 22%);
+    radial-gradient(circle at 20% 20%, rgba(var(--accent-primary-rgb), 0.34) 0, transparent 18%),
+    radial-gradient(circle at 80% 30%, rgba(var(--accent-secondary-rgb), 0.3) 0, transparent 18%),
+    radial-gradient(circle at 50% 80%, rgba(var(--accent-primary-rgb), 0.2) 0, transparent 22%);
 }
 
 .sy-binary-layer {
   position: absolute;
   inset: 0;
-  opacity: 0.26;
+  opacity: 0.48;
   background-image:
-    linear-gradient(to bottom, transparent, rgba(var(--accent-primary-rgb), 0.08), transparent),
+    linear-gradient(to bottom, transparent, rgba(var(--accent-primary-rgb), 0.2), transparent),
     repeating-linear-gradient(
       to bottom,
       transparent 0,
       transparent 26px,
-      rgba(var(--accent-primary-rgb), 0.18) 27px,
+      rgba(var(--accent-primary-rgb), 0.3) 27px,
       transparent 28px
     );
+  filter:
+    drop-shadow(0 0 18px rgba(var(--accent-primary-rgb), 0.3))
+    drop-shadow(0 0 30px rgba(var(--accent-secondary-rgb), 0.18));
 }
 
 .sy-binary-column {
@@ -780,9 +850,12 @@ option {
   font-size: 0.82rem;
   line-height: 1.2;
   letter-spacing: 0.12em;
-  color: rgba(var(--accent-primary-rgb), 0.38);
+  color: rgba(var(--accent-primary-rgb), 0.62);
   white-space: pre;
   user-select: none;
   pointer-events: none;
-  text-shadow: 0 0 14px rgba(var(--accent-primary-rgb), 0.18);
+  text-shadow:
+    0 0 12px rgba(var(--accent-primary-rgb), 0.34),
+    0 0 26px rgba(var(--accent-secondary-rgb), 0.26),
+    0 0 40px rgba(var(--accent-primary-rgb), 0.14);
 }

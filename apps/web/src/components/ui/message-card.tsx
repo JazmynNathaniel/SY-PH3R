@@ -22,11 +22,11 @@ export function MessageCard({
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-[14px] border border-accent-primary/12 bg-accent-primary/6 font-mono text-[12px] uppercase text-accent-primary">
+          <div className="grid h-9 w-9 place-items-center rounded-[14px] border border-accent-primary/12 bg-accent-primary/6 text-[12px] font-semibold uppercase text-accent-primary">
             {sender.slice(0, 2)}
           </div>
           <div>
-            <p className="font-medium text-text-primary">{sender}</p>
+            <p className="sy-section-heading text-text-primary">{sender}</p>
             <p className="sy-code-text text-[11px]">{meta}</p>
           </div>
         </div>

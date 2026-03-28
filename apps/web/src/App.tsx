@@ -17,7 +17,6 @@ import {
   Chip,
   ComposerDock,
   EmptyPanel,
-  MemberPill,
   MiniSignal,
   ResultBlock,
   SectionHeader,
@@ -157,9 +156,9 @@ const UI_THEME_PRESETS: Array<{
   {
     id: "gridline",
     label: "Gridline",
-    description: "Sharper grid emphasis and tighter divider contrast.",
-    primary: "#8dff72",
-    secondary: "#6fffd3"
+    description: "Neon pink grid glow with deep violet contrast.",
+    primary: "#ff4fd8",
+    secondary: "#9f6bff"
   },
   {
     id: "blacksite",
@@ -207,27 +206,25 @@ function App() {
   const [verifyForm, setVerifyForm] = useState<VerifyForm>(initialVerifyForm);
   const [createdInvite, setCreatedInvite] = useState<InviteRecord | null>(null);
   const [pendingDevice, setPendingDevice] = useState<DeviceRecord | null>(null);
-  const [statusMessage, setStatusMessage] = useState("operator.link // awaiting");
+  const [statusMessage, setStatusMessage] = useState("Connecting");
   const [errorMessage, setErrorMessage] = useState("");
   const [sessionReady, setSessionReady] = useState(Boolean(getSessionToken()));
   const [vaultPassphrase, setVaultPassphrase] = useState("");
   const [vaultState, setVaultState] = useState<DraftVaultState>(EMPTY_DRAFT_VAULT);
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
-  const [vaultStatus, setVaultStatus] = useState(
-    hasStoredDraftVault() ? "vault.detected // locked" : "vault.absent // initialize"
-  );
+  const [vaultStatus, setVaultStatus] = useState(hasStoredDraftVault() ? "Draft vault locked" : "No saved drafts yet");
   const [draftComposer, setDraftComposer] = useState<DraftComposerState>(initialDraftComposer);
   const [roomSecret, setRoomSecret] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [activeTheme, setActiveTheme] = useState<UiThemeId>("emerald-static");
   const [cipherEnvelopes, setCipherEnvelopes] = useState<MessageEnvelope[]>([]);
   const [roomMessages, setRoomMessages] = useState<DecryptedRoomMessage[]>([]);
-  const [messageStatus, setMessageStatus] = useState("room.locked // secret required");
+  const [messageStatus, setMessageStatus] = useState("Enter the room key to read messages");
   const [dmState, setDmState] = useState<DirectMessageState>({
     recipientId: "",
     secret: "",
     body: "",
-    status: "dm.idle // select member",
+    status: "Choose a member to start chatting",
     envelopes: [],
     messages: []
   });
@@ -267,7 +264,7 @@ function App() {
       const result = await bootstrapSession();
       setSessionToken(result.auth.token);
       setSessionReady(true);
-      setStatusMessage("operator.link // established");
+      setStatusMessage("Connected");
       setErrorMessage("");
       await refreshMessages(roomSecret);
       if (dmState.recipientId) {
@@ -275,7 +272,7 @@ function App() {
       }
     } catch (error) {
       setErrorMessage(toMessage(error));
-      setStatusMessage("operator.link // failed");
+      setStatusMessage("Offline");
     }
   }
 
@@ -291,7 +288,7 @@ function App() {
 
   async function refreshMessages(secret: string) {
     if (!getSessionToken()) {
-      setMessageStatus("room.sync // session required");
+      setMessageStatus("Sign in to sync messages");
       return;
     }
 
@@ -301,7 +298,7 @@ function App() {
 
       if (!secret) {
         setRoomMessages([]);
-        setMessageStatus("room.locked // secret required");
+        setMessageStatus("Enter the room key to read messages");
         return;
       }
 
@@ -316,7 +313,7 @@ function App() {
       );
 
       setRoomMessages(decrypted.reverse());
-      setMessageStatus(`room.sync // ${decrypted.length} decrypted`);
+      setMessageStatus(`${decrypted.length} messages loaded`);
     } catch (error) {
       setRoomMessages([]);
       setMessageStatus(toMessage(error));
@@ -327,7 +324,7 @@ function App() {
     if (!recipientId) {
       setDmState((current) => ({
         ...current,
-        status: "dm.idle // select member",
+        status: "Choose a member to start chatting",
         envelopes: [],
         messages: []
       }));
@@ -337,7 +334,7 @@ function App() {
     if (!getSessionToken()) {
       setDmState((current) => ({
         ...current,
-        status: "dm.sync // session required"
+        status: "Sign in to sync messages"
       }));
       return;
     }
@@ -350,7 +347,7 @@ function App() {
           ...current,
           envelopes: result.items,
           messages: [],
-          status: "dm.locked // secret required"
+          status: "Enter the direct message key to read messages"
         }));
         return;
       }
@@ -369,7 +366,7 @@ function App() {
         ...current,
         envelopes: result.items,
         messages: decrypted.reverse(),
-        status: `dm.sync // ${decrypted.length} decrypted`
+        status: `${decrypted.length} messages loaded`
       }));
     } catch (error) {
       setDmState((current) => ({
@@ -393,7 +390,7 @@ function App() {
 
         setCreatedInvite(invite);
         setRedeemForm((current) => ({ ...current, code: invite.code }));
-        setStatusMessage(`invite.issued // ${invite.label}`);
+        setStatusMessage("Invite created");
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(toMessage(error));
@@ -438,7 +435,7 @@ function App() {
           method: result.device.verificationMethod,
           proof: "room-seal-001"
         });
-        setStatusMessage(`member.joined // ${result.member.displayName}`);
+        setStatusMessage(`${result.member.displayName} joined`);
         setErrorMessage("");
         await refreshRoom();
         await refreshMessages(roomSecret);
@@ -460,7 +457,7 @@ function App() {
           ...verifyForm,
           signature
         });
-        setStatusMessage(`device.verify // ${formatTimestamp(result.event.createdAt)}`);
+        setStatusMessage(`Device verified ${formatTimestamp(result.event.createdAt)}`);
         setErrorMessage("");
         await refreshRoom();
       } catch (error) {
@@ -476,7 +473,7 @@ function App() {
         const restored = await loadDraftVault(vaultPassphrase);
         setVaultState(restored);
         setVaultUnlocked(true);
-        setVaultStatus(`vault.unlocked // ${restored.drafts.length} draft(s)`);
+        setVaultStatus(`Draft vault unlocked · ${restored.drafts.length} saved`);
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(toMessage(error));
@@ -489,7 +486,7 @@ function App() {
     startTransition(async () => {
       try {
         if (!vaultPassphrase) {
-          throw new Error("vault.passphrase // required");
+          throw new Error("Enter your draft vault passphrase.");
         }
 
         const nextState = upsertDraft(vaultState, {
@@ -502,7 +499,7 @@ function App() {
         await saveDraftVault(vaultPassphrase, nextState);
         setVaultState(nextState);
         setVaultUnlocked(true);
-        setVaultStatus("vault.write // encrypted");
+        setVaultStatus("Draft saved");
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(toMessage(error));
@@ -529,11 +526,11 @@ function App() {
     startTransition(async () => {
       try {
         if (!roomSecret) {
-          throw new Error("room.secret // required");
+          throw new Error("Enter the room key before sending.");
         }
 
         if (!getSessionToken()) {
-          throw new Error("session.token // required");
+          throw new Error("You need an active session to send messages.");
         }
 
         const senderDeviceId = pendingDevice?.id ?? "device_iris_studio";
@@ -548,7 +545,7 @@ function App() {
         });
 
         setMessageBody("");
-        setMessageStatus("room.send // envelope sealed");
+        setMessageStatus("Message sent");
         await refreshMessages(roomSecret);
       } catch (error) {
         setMessageStatus(toMessage(error));
@@ -561,15 +558,15 @@ function App() {
     startTransition(async () => {
       try {
         if (!dmState.recipientId) {
-          throw new Error("dm.recipient // required");
+          throw new Error("Choose who you want to message.");
         }
 
         if (!dmState.secret) {
-          throw new Error("dm.secret // required");
+          throw new Error("Enter the direct message key before sending.");
         }
 
         if (!getSessionToken()) {
-          throw new Error("session.token // required");
+          throw new Error("You need an active session to send messages.");
         }
 
         const senderDeviceId = pendingDevice?.id ?? "device_iris_studio";
@@ -586,7 +583,7 @@ function App() {
         setDmState((current) => ({
           ...current,
           body: "",
-          status: "dm.send // envelope sealed"
+          status: "Message sent"
         }));
         await refreshDirectMessages(dmState.recipientId, dmState.secret);
       } catch (error) {
@@ -615,10 +612,10 @@ function App() {
       >
         <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-4">
-            <p className="sy-terminal-label">SY-PH3R</p>
+            <p className="sy-brand-mark">SY-PH3R</p>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-4xl font-semibold uppercase tracking-[0.14em] text-text-primary md:text-6xl">
-                Blacksite Signal
+              <h1 className="sy-display-heading">
+                Trusted Circle
               </h1>
               <SecurityStatusBadge label={statusMessage} tone="secure" />
             </div>
@@ -630,58 +627,68 @@ function App() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
-            <MiniSignal label="Room" value={room?.room.title ?? "room_main"} />
-            <MiniSignal label="Feed" value={`${cipherEnvelopes.length} envelopes`} />
-            <MiniSignal label="Direct" value={dmState.recipientId ? selectedDirectName : "Idle"} />
+            <MiniSignal label="Room" value={room?.room.title ?? "Main room"} />
+            <MiniSignal label="Messages" value={`${cipherEnvelopes.length} saved`} />
+            <MiniSignal label="Direct chat" value={dmState.recipientId ? selectedDirectName : "Not selected"} />
           </div>
         </div>
       </motion.header>
       <ViewTabs
         items={[
           { id: "home", label: "Home" },
-          { id: "getting-started", label: "Guide" },
-          { id: "room", label: "Room" },
-          { id: "direct", label: "Direct" },
-          { id: "identity", label: "Identity" },
-          { id: "security", label: "Security" }
+          { id: "getting-started", label: "Getting Started" },
+          { id: "room", label: "Chat" },
+          { id: "direct", label: "Direct Messages" },
+          { id: "identity", label: "Profile" },
+          { id: "security", label: "Settings" }
         ]}
         view={view}
         onChange={setView}
       />
 
       {view === "home" ? (
-        <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-          <CalmPanel title="Home" subtitle="Private room">
+        <section className="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
+          <CalmPanel title="Home" subtitle="Your private space">
             <div className="grid gap-6">
               <SectionHeader
-                title="Dashboard"
-                subtitle=""
+                title="Conversations"
+                subtitle="Pick up where your circle left off."
                 aside={<Chip text={`${memberCount}/5 active`} />}
               />
               <div className="grid gap-4 md:grid-cols-3">
-                <ActionCard title="Open Room" description="Shared thread" onClick={() => setView("room")} />
-                <ActionCard title="Direct Thread" description="Private conversation" onClick={() => setView("direct")} />
-                <ActionCard title="Security" description="Access controls" onClick={() => setView("security")} />
+                <ActionCard title="Open chat" description="Everyone in one room" onClick={() => setView("room")} />
+                <ActionCard title="Direct messages" description="One person at a time" onClick={() => setView("direct")} />
+                <ActionCard title="Settings" description="Invites, devices, and drafts" onClick={() => setView("security")} />
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <StatPanel label="Messages" value={`${roomMessages.length}`} meta="decrypted in room" />
-                <StatPanel label="Members" value={`${memberCount}/5`} meta="approved circle" />
-                <StatPanel label="Theme" value={activePreset.label} meta="active preset" />
+                <StatPanel label="Chat" value={`${roomMessages.length}`} meta="messages ready to read" />
+                <StatPanel label="Members" value={`${memberCount}/5`} meta="people in your circle" />
+                <StatPanel label="Theme" value={activePreset.label} meta="current look" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="sy-info-card rounded-[24px] p-5">
+                  <p className="sy-terminal-label">Latest room status</p>
+                  <p className="mt-3 text-base text-text-primary">{messageStatus}</p>
+                </div>
+                <div className="sy-info-card rounded-[24px] p-5">
+                  <p className="sy-terminal-label">Draft vault</p>
+                  <p className="mt-3 text-base text-text-primary">{vaultStatus}</p>
+                </div>
               </div>
             </div>
           </CalmPanel>
 
-          <CalmPanel title="Presence" subtitle="Members">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+          <CalmPanel title="Members" subtitle="Who is here">
+            <div className="grid gap-4 md:grid-cols-2">
               {members.length === 0 ? (
-                <EmptyPanel text="No approved members loaded yet." />
+                <EmptyPanel text="No members have joined yet." />
               ) : (
                 members.map((member) => (
-                  <div key={member.id} className="sy-info-card rounded-[24px] px-4 py-4">
+                  <div key={member.id} className="sy-info-card rounded-[24px] px-5 py-5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-base font-medium tracking-[0.04em] text-text-primary">{member.displayName}</p>
-                        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary">
+                        <p className="sy-section-heading text-text-primary">{member.displayName}</p>
+                        <p className="sy-meta mt-1">
                           @{member.handle}
                         </p>
                       </div>
@@ -696,16 +703,16 @@ function App() {
       ) : null}
 
       {view === "getting-started" ? (
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <CalmPanel title="Getting Started" subtitle="User flow">
+        <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
+          <CalmPanel title="Getting Started" subtitle="How to use the app">
             <div className="grid gap-4 md:grid-cols-2">
               {[
                 "Create or receive an invite.",
                 "Redeem the invite on this device.",
                 "Verify the device with a secure code or QR flow.",
-                "Unlock the room or a direct thread with the shared secret.",
+                "Unlock the room or a direct chat with the shared key.",
                 "Read messages in the main timeline and send from the composer at the bottom.",
-                "Use Security for invites, vault access, and device status."
+                "Use Settings for invites, saved drafts, and device status."
               ].map((step, index) => (
                 <div key={step} className="sy-step-card rounded-[24px] px-4 py-4">
                   <div className="flex items-start gap-4">
@@ -717,51 +724,151 @@ function App() {
             </div>
           </CalmPanel>
 
-          <CalmPanel title="Shortcuts" subtitle="Jump in">
-            <div className="grid gap-4">
-              <ActionCard title="Go to Room" description="Open the shared timeline." onClick={() => setView("room")} />
-              <ActionCard title="Go to Direct" description="Open a one-to-one thread." onClick={() => setView("direct")} />
-              <ActionCard title="Open Security" description="Manage invites and verification." onClick={() => setView("security")} />
+          <CalmPanel title="Start here" subtitle="Follow the steps while you use them">
+            <div className="grid gap-6">
+              <div className="grid gap-4">
+                <SectionHeader title="1. Create an invite" subtitle="Make an invite for the next member." />
+                <form className="grid gap-3" onSubmit={handleCreateInviteSubmit}>
+                  <Field label="Invite label">
+                    <input
+                      className="sy-input"
+                      value={inviteForm.label}
+                      onChange={(event) => setInviteForm((current) => ({ ...current, label: event.target.value }))}
+                    />
+                  </Field>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Created by member ID">
+                      <input
+                        className="sy-input"
+                        value={inviteForm.createdByMemberId}
+                        onChange={(event) =>
+                          setInviteForm((current) => ({ ...current, createdByMemberId: event.target.value }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Expiry">
+                      <input
+                        className="sy-input"
+                        type="datetime-local"
+                        value={inviteForm.expiresAt}
+                        onChange={(event) => setInviteForm((current) => ({ ...current, expiresAt: event.target.value }))}
+                      />
+                    </Field>
+                  </div>
+                  <ActionButton pending={isPending} label="Create invite" pendingLabel="Creating..." />
+                </form>
+                {createdInvite ? (
+                  <ResultBlock
+                    title={createdInvite.label}
+                    body={createdInvite.code}
+                    meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`}
+                  />
+                ) : null}
+              </div>
+
+              <div className="grid gap-4">
+                <SectionHeader
+                  title="2. Open the chat"
+                  subtitle="Enter the room key, then go straight to the conversation."
+                />
+                <form className="grid gap-3" onSubmit={handleRoomUnlock}>
+                  <Field label="Room key">
+                    <input
+                      className="sy-input"
+                      type="password"
+                      value={roomSecret}
+                      onChange={(event) => setRoomSecret(event.target.value)}
+                    />
+                  </Field>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <ActionButton pending={isPending} label="Open chat" pendingLabel="Opening..." />
+                    <CyberButton label="Go to chat" onClick={() => setView("room")} type="button" />
+                  </div>
+                </form>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <ActionCard title="Open chat" description="Go to the shared conversation." onClick={() => setView("room")} />
+                <ActionCard title="Open direct messages" description="Start a private conversation." onClick={() => setView("direct")} />
+                <ActionCard title="Open settings" description="Manage invites and devices." onClick={() => setView("security")} />
+              </div>
             </div>
           </CalmPanel>
         </section>
       ) : null}
 
       {view === "room" ? (
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.62fr)_300px]">
-          <CalmPanel title="Room" subtitle="Shared conversation">
+        <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid content-start gap-4">
+            <CalmPanel title="Members" subtitle="Everyone in the room">
+              <div className="grid gap-3">
+                {members.length === 0 ? (
+                  <EmptyPanel text="No members available." />
+                ) : (
+                  members.map((member) => (
+                    <div key={member.id} className="sy-info-card rounded-[22px] px-4 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="sy-section-heading text-text-primary">{member.displayName}</p>
+                          <p className="sy-meta mt-1">@{member.handle}</p>
+                        </div>
+                        <SecurityStatusBadge label={member.badge} tone="active" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CalmPanel>
+
+            <CalmPanel title="Chat settings" subtitle="Unlock and sync">
+              <form className="grid gap-3" onSubmit={handleRoomUnlock}>
+                <Field label="Room key">
+                  <input
+                    className="sy-input"
+                    type="password"
+                    value={roomSecret}
+                    onChange={(event) => setRoomSecret(event.target.value)}
+                  />
+                </Field>
+                <ActionButton pending={isPending} label="Open chat" pendingLabel="Opening..." />
+              </form>
+            </CalmPanel>
+
+            <CalmPanel title="Chat details" subtitle="Quick view">
+              <div className="grid gap-3">
+                <StatusCard title="Messages" value={`${cipherEnvelopes.length} saved`} />
+                <StatusCard title="You" value={currentMember?.displayName ?? "Set up this device"} />
+                <StatusCard
+                  title="Disappear timer"
+                  value={draftComposer.disappearingWindow === "off" ? "Off" : draftComposer.disappearingWindow}
+                />
+              </div>
+            </CalmPanel>
+          </div>
+
+          <CalmPanel title="Group chat" subtitle="Shared conversation">
             <div className="grid gap-4">
               <SectionHeader
                 title={room?.room.title ?? "Main Room"}
                 subtitle={messageStatus}
                 aside={
                   <>
-                    <Chip text={`${roomMessages.length} visible`} />
+                    <Chip text={`${roomMessages.length} shown`} />
                     <Chip text={`${memberCount}/5 members`} />
                   </>
                 }
               />
 
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {members.length === 0 ? (
-                  <EmptyPanel text="No members available." />
-                ) : (
-                  members.map((member) => (
-                    <MemberPill key={member.id} name={member.displayName} meta={`@${member.handle}`} />
-                  ))
-                )}
-              </div>
-
               <div className="sy-chat-feed min-h-[540px] rounded-[26px] p-4 md:p-6">
                 <div className="mx-auto max-w-[760px] space-y-3">
                   {roomMessages.length === 0 ? (
-                    <EmptyPanel text="No decrypted messages loaded." />
+                    <EmptyPanel text="No messages are ready to read yet." />
                   ) : (
                     roomMessages.map((message, index) => (
                       <MessageItem
                         key={message.envelopeId}
                         sender={message.senderDeviceId}
-                        meta={`${formatTimestamp(message.sentAt)} / ${message.expiresAt ?? "persistent"}`}
+                        meta={`${formatTimestamp(message.sentAt)} - ${message.expiresAt ?? "Saved"}`}
                         body={message.body}
                         active={index === 0}
                       />
@@ -772,10 +879,10 @@ function App() {
 
               <form className="grid gap-3" onSubmit={handleSendMessage}>
                 <div className="mx-auto w-full max-w-[760px]">
-                  <ComposerDock title="Send message">
+                  <ComposerDock title="New message">
                     <textarea
                       className="sy-input min-h-28 resize-y"
-                      placeholder="Write to the room"
+                      placeholder="Write a message"
                       value={messageBody}
                       onChange={(event) => setMessageBody(event.target.value)}
                     />
@@ -787,88 +894,15 @@ function App() {
               </form>
             </div>
           </CalmPanel>
-
-          <div className="grid content-start gap-4">
-            <CalmPanel title="Room Access" subtitle="Unlock">
-              <form className="grid gap-3" onSubmit={handleRoomUnlock}>
-                <Field label="Shared room secret">
-                  <input
-                    className="sy-input"
-                    type="password"
-                    value={roomSecret}
-                    onChange={(event) => setRoomSecret(event.target.value)}
-                  />
-                </Field>
-                <ActionButton pending={isPending} label="Unlock room" pendingLabel="Decrypting..." />
-              </form>
-            </CalmPanel>
-
-            <CalmPanel title="Status" subtitle="Room">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <StatusCard title="Feed" value={`${cipherEnvelopes.length} sealed envelopes`} />
-                <StatusCard title="You" value={currentMember?.displayName ?? "Pending device"} />
-                <StatusCard title="Expiry" value={draftComposer.disappearingWindow === "off" ? "Off" : draftComposer.disappearingWindow} />
-              </div>
-            </CalmPanel>
-          </div>
         </section>
       ) : null}
 
       {view === "direct" ? (
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.62fr)_300px]">
-          <CalmPanel title="Direct" subtitle="Private thread">
-            <div className="grid gap-4">
-              <SectionHeader
-                title={selectedDirectName}
-                subtitle={dmState.status}
-                aside={<Chip text={`${dmState.messages.length} visible`} />}
-              />
-
-              <div className="sy-chat-feed min-h-[540px] rounded-[26px] p-4 md:p-6">
-                <div className="mx-auto max-w-[760px] space-y-3">
-                  {dmState.messages.length === 0 ? (
-                    <EmptyPanel text="No decrypted direct messages loaded." />
-                  ) : (
-                    dmState.messages.map((message, index) => (
-                      <MessageItem
-                        key={message.envelopeId}
-                        sender={message.senderDeviceId}
-                        meta={`${formatTimestamp(message.sentAt)} / direct`}
-                        body={message.body}
-                        active={index === 0}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <form className="grid gap-3" onSubmit={handleSendDirectMessage}>
-                <div className="mx-auto w-full max-w-[760px]">
-                  <ComposerDock title="Send direct message">
-                    <textarea
-                      className="sy-input min-h-28 resize-y"
-                      placeholder="Write to this member"
-                      value={dmState.body}
-                      onChange={(event) =>
-                        setDmState((current) => ({
-                          ...current,
-                          body: event.target.value
-                        }))
-                      }
-                    />
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      <ActionButton pending={isPending} label="Send direct" pendingLabel="Sealing..." />
-                    </div>
-                  </ComposerDock>
-                </div>
-              </form>
-            </div>
-          </CalmPanel>
-
+        <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <div className="grid content-start gap-4">
-            <CalmPanel title="Thread Setup" subtitle="Member and secret">
+            <CalmPanel title="Start a chat" subtitle="Choose a person">
               <div className="grid gap-4">
-                <Field label="Recipient">
+                <Field label="Member">
                   <select
                     className="sy-input"
                     value={dmState.recipientId}
@@ -889,7 +923,7 @@ function App() {
                       ))}
                   </select>
                 </Field>
-                <Field label="Thread secret">
+                <Field label="Direct message key">
                   <input
                     className="sy-input"
                     type="password"
@@ -903,38 +937,95 @@ function App() {
                   />
                 </Field>
                 <form className="grid gap-3" onSubmit={handleDirectUnlock}>
-                  <ActionButton pending={isPending} label="Unlock thread" pendingLabel="Decrypting..." />
+                  <ActionButton pending={isPending} label="Open messages" pendingLabel="Opening..." />
                 </form>
               </div>
             </CalmPanel>
 
-            <CalmPanel title="People" subtitle="Available members">
+            <CalmPanel title="Available members" subtitle="Choose who to message">
               <div className="grid gap-3">
                 {members.length === 0 ? (
                   <EmptyPanel text="No members available." />
                 ) : (
                   members.map((member) => (
-                    <MemberPill key={member.id} name={member.displayName} meta={`@${member.handle}`} />
+                    <div key={member.id} className="sy-info-card rounded-[22px] px-4 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="sy-section-heading text-text-primary">{member.displayName}</p>
+                          <p className="sy-meta mt-1">@{member.handle}</p>
+                        </div>
+                        <SecurityStatusBadge label={member.badge} tone="active" />
+                      </div>
+                    </div>
                   ))
                 )}
               </div>
             </CalmPanel>
 
-            <ResultBlock title="Thread status" body={dmState.status} meta={`${dmState.envelopes.length} sealed items`} />
+            <ResultBlock title="Direct messages" body={dmState.status} meta={`${dmState.envelopes.length} saved`} />
           </div>
+
+          <CalmPanel title="Direct messages" subtitle="Private conversation">
+            <div className="grid gap-4">
+              <SectionHeader
+                title={selectedDirectName}
+                subtitle={dmState.status}
+                aside={<Chip text={`${dmState.messages.length} shown`} />}
+              />
+
+              <div className="sy-chat-feed min-h-[540px] rounded-[26px] p-4 md:p-6">
+                <div className="mx-auto max-w-[760px] space-y-3">
+                  {dmState.messages.length === 0 ? (
+                    <EmptyPanel text="No direct messages are ready to read yet." />
+                  ) : (
+                    dmState.messages.map((message, index) => (
+                      <MessageItem
+                        key={message.envelopeId}
+                        sender={message.senderDeviceId}
+                        meta={`${formatTimestamp(message.sentAt)} - Direct message`}
+                        body={message.body}
+                        active={index === 0}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <form className="grid gap-3" onSubmit={handleSendDirectMessage}>
+                <div className="mx-auto w-full max-w-[760px]">
+                  <ComposerDock title="New direct message">
+                    <textarea
+                      className="sy-input min-h-28 resize-y"
+                      placeholder="Write a message"
+                      value={dmState.body}
+                      onChange={(event) =>
+                        setDmState((current) => ({
+                          ...current,
+                          body: event.target.value
+                        }))
+                      }
+                    />
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      <ActionButton pending={isPending} label="Send message" pendingLabel="Sending..." />
+                    </div>
+                  </ComposerDock>
+                </div>
+              </form>
+            </div>
+          </CalmPanel>
         </section>
       ) : null}
 
       {view === "identity" ? (
         <section className="grid gap-6 xl:grid-cols-[0.84fr_1.16fr]">
-          <CalmPanel title="Members" subtitle="Identity modules">
+          <CalmPanel title="Profile" subtitle="People in your circle">
             <div className="grid gap-4 md:grid-cols-2">
               {(room?.members ?? []).map((member) => (
                 <div key={member.id} className="sy-info-card rounded-[24px] p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="font-medium uppercase tracking-[0.12em] text-text-primary">{member.displayName}</p>
-                      <p className="font-mono text-xs text-text-secondary">@{member.handle}</p>
+                      <p className="sy-section-heading text-text-primary">{member.displayName}</p>
+                      <p className="sy-meta mt-1">@{member.handle}</p>
                     </div>
                     <SecurityStatusBadge label={member.badge} tone="active" />
                   </div>
@@ -946,7 +1037,7 @@ function App() {
               ))}
             </div>
           </CalmPanel>
-          <CalmPanel title="Theme Presets" subtitle="Controlled customization">
+          <CalmPanel title="Theme" subtitle="Choose the look">
             <div className="grid gap-3 md:grid-cols-2">
               {UI_THEME_PRESETS.map((preset) => (
                 <button
@@ -978,7 +1069,7 @@ function App() {
 
       {view === "security" ? (
         <section className="grid gap-6 xl:grid-cols-2">
-          <CalmPanel title="Access" subtitle="Invites and verification">
+          <CalmPanel title="Settings" subtitle="Invites and devices">
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <form className="grid gap-3" onSubmit={handleCreateInviteSubmit}>
@@ -989,7 +1080,7 @@ function App() {
                       onChange={(event) => setInviteForm((current) => ({ ...current, label: event.target.value }))}
                     />
                   </Field>
-                  <Field label="Created by">
+                  <Field label="Created by member ID">
                     <input
                       className="sy-input"
                       value={inviteForm.createdByMemberId}
@@ -1009,7 +1100,7 @@ function App() {
                   <ActionButton pending={isPending} label="Create invite" pendingLabel="Issuing..." />
                 </form>
                 {createdInvite ? (
-                  <ResultBlock title={createdInvite.label} body={createdInvite.code} meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`} />
+                    <ResultBlock title={createdInvite.label} body={createdInvite.code} meta={`Expires ${formatTimestamp(createdInvite.expiresAt)}`} />
                 ) : null}
               </div>
 
@@ -1023,7 +1114,7 @@ function App() {
                     />
                   </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Display">
+                    <Field label="Display name">
                       <input
                         className="sy-input"
                         value={redeemForm.displayName}
@@ -1041,7 +1132,7 @@ function App() {
                     </Field>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Device">
+                    <Field label="Device name">
                       <input
                         className="sy-input"
                         value={redeemForm.deviceLabel}
@@ -1050,7 +1141,7 @@ function App() {
                         }
                       />
                     </Field>
-                    <Field label="Method">
+                    <Field label="Verification method">
                       <select
                         className="sy-input"
                         value={redeemForm.verificationMethod}
@@ -1070,14 +1161,14 @@ function App() {
                 </form>
 
                 <form className="grid gap-3" onSubmit={handleVerifySubmit}>
-                  <Field label="Device id">
+                  <Field label="Device ID">
                     <input
                       className="sy-input sy-code-text"
                       value={verifyForm.deviceId}
                       onChange={(event) => setVerifyForm((current) => ({ ...current, deviceId: event.target.value }))}
                     />
                   </Field>
-                  <Field label="Verification proof">
+                  <Field label="Verification code">
                     <input
                       className="sy-input"
                       value={verifyForm.proof}
@@ -1090,7 +1181,7 @@ function App() {
             </div>
           </CalmPanel>
 
-          <CalmPanel title="Local Vault" subtitle="Draft protection">
+          <CalmPanel title="Draft vault" subtitle="Saved drafts">
             <form className="grid gap-3" onSubmit={handleVaultUnlock}>
               <Field label="Unlock phrase">
                 <input
@@ -1217,7 +1308,7 @@ function LoadingScreen() {
           transition={{ duration: 1.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         >
           <p className="sy-terminal-label">SY-PH3R / initializing</p>
-          <h2 className="mt-4 text-4xl font-semibold uppercase tracking-[0.14em] text-text-primary md:text-5xl">
+          <h2 className="sy-display-heading mt-4">
             Loading...
           </h2>
           <p className="mt-4 text-sm leading-7 text-text-secondary">
@@ -1248,7 +1339,7 @@ function CommandPanel({
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="sy-terminal-label">{badge}</p>
-          <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.12em] text-text-primary">{title}</h2>
+          <h2 className="sy-section-heading mt-2">{title}</h2>
         </div>
       </div>
       <div className="sy-divider mb-4" />

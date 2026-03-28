@@ -19,7 +19,7 @@ export function AppShell({
     >
       <BinaryBackdrop />
       <motion.div
-        className="relative z-10 mx-auto flex w-full max-w-[1360px] flex-col gap-7 px-6 py-6 md:px-10 lg:px-12"
+        className="relative z-10 mx-auto flex w-full max-w-[1500px] flex-col gap-7 px-5 py-6 md:px-8 lg:px-10 xl:px-12"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
