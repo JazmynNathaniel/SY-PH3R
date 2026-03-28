@@ -96,6 +96,7 @@ Required environment variables on Render:
 - `NODE_ENV=production`
 - `HOST=0.0.0.0`
 - `SESSION_SECRET=<long-random-secret>`
+- `CIRCLE_CODE_SECRET=<separate-long-random-secret>`
 - `OPERATOR_BOOTSTRAP_SECRET=<separate-long-random-secret>`
 - `DB_PATH=./apps/relay/data/sy-ph3r.db`
 
@@ -103,15 +104,36 @@ Notes:
 
 - Render provides `PORT` automatically for web services.
 - `HOST` must be `0.0.0.0` so the service binds to Render's network interface.
+- `CIRCLE_CODE_SECRET` controls the rotating member re-entry code. The relay accepts the current 2-hour window and the immediately previous window.
 - `OPERATOR_BOOTSTRAP_SECRET` is for a one-time operator-only bootstrap request and should never be exposed in the public frontend UI.
 - `DB_PATH` points at a local SQLite file; attach a persistent disk if you want relay data to survive redeploys or restarts.
 
-One-time operator bootstrap:
+One-time operator bootstrap for the first real member:
 
 ```bash
-curl -X POST https://your-relay-service.example.com/v1/operator/bootstrap-session \
+curl -X POST https://your-relay-service.example.com/v1/operator/bootstrap-profile \
   -H "content-type: application/json" \
-  -d '{"secret":"<OPERATOR_BOOTSTRAP_SECRET>"}'
+  -d '{
+    "secret":"<OPERATOR_BOOTSTRAP_SECRET>",
+    "member":{
+      "id":"member_primary",
+      "displayName":"Your Name",
+      "handle":"your_handle",
+      "accent":"sea-glow",
+      "layout":"signal",
+      "photoUrl":"",
+      "badge":"verified"
+    },
+    "device":{
+      "id":"device_primary_browser",
+      "memberId":"member_primary",
+      "label":"Primary Browser",
+      "verificationMethod":"code",
+      "publicKey":"bootstrap-public-key-placeholder",
+      "verifiedAt":null,
+      "revokedAt":null
+    }
+  }'
 ```
 
 Take the returned `auth.token` and set it in the browser session storage for the frontend origin:
@@ -121,3 +143,9 @@ sessionStorage.setItem("sy-ph3r.sessionToken", "<returned auth.token>")
 ```
 
 Reload the app after setting the token.
+
+Member re-entry:
+
+- first-time people join with an invite and create their profile
+- existing members re-enter with the current rotating circle code plus their call sign
+- the frontend does not generate or display the rotating code; distribute it to the group out-of-band

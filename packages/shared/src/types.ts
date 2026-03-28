@@ -62,6 +62,19 @@ export type InviteRecord = CreateInviteInput & {
   redeemedByMemberId: string | null;
 };
 
+export type CircleAccessDeviceInput = {
+  id: string;
+  label: string;
+  verificationMethod: "qr" | "code";
+  publicKey: string;
+};
+
+export type CircleAccessEnterInput = {
+  code: string;
+  handle: string;
+  device: CircleAccessDeviceInput;
+};
+
 export type DeviceVerificationEvent = {
   id: string;
   deviceId: string;

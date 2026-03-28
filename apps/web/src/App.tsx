@@ -29,8 +29,8 @@ import { createDeviceIdentity } from "./lib/deviceIdentity";
 import { hasStoredDraftVault, loadDraftVault, saveDraftVault } from "./lib/localVault";
 import { decryptRoomMessage, encryptRoomMessage } from "./lib/messageCrypto";
 import {
-  bootstrapSession,
   createInvite,
+  enterCircle,
   fetchEnvelopes,
   fetchMainRoom,
   getSessionToken,
@@ -49,6 +49,12 @@ type RedeemInviteForm = {
   displayName: string;
   accent: PersonalizationPresetId;
   layout: "constellation" | "archive" | "signal";
+  deviceLabel: string;
+};
+
+type CircleEntryForm = {
+  code: string;
+  handle: string;
   deviceLabel: string;
 };
 
@@ -110,6 +116,12 @@ const initialRedeemForm: RedeemInviteForm = {
 const initialDraftComposer: DraftComposerState = {
   body: "",
   disappearingWindow: "24h"
+};
+
+const initialCircleEntryForm: CircleEntryForm = {
+  code: "",
+  handle: "",
+  deviceLabel: "My device"
 };
 
 const DEFAULT_ROOM_SECRET = "sy-ph3r-room-main";
@@ -185,6 +197,7 @@ function App() {
   const [room, setRoom] = useState<MainRoomResponse | null>(null);
   const [inviteForm, setInviteForm] = useState<CreateInviteForm>(initialInviteForm);
   const [redeemForm, setRedeemForm] = useState<RedeemInviteForm>(initialRedeemForm);
+  const [circleEntryForm, setCircleEntryForm] = useState<CircleEntryForm>(initialCircleEntryForm);
   const [createdInvite, setCreatedInvite] = useState<InviteRecord | null>(null);
   const [inviteShareStatus, setInviteShareStatus] = useState("");
   const [pendingDevice, setPendingDevice] = useState<DeviceRecord | null>(null);
@@ -224,12 +237,8 @@ function App() {
       await refreshRoom();
 
       if (!getSessionToken()) {
-        if (import.meta.env.DEV) {
-          await ensureBootstrapSession();
-        } else {
-          setStatusMessage("Not signed in on this device");
-          setMessageStatus("Join the circle to start chatting");
-        }
+        setStatusMessage("Not signed in on this device");
+        setMessageStatus("Join the circle to start chatting");
       } else {
         await refreshMessages();
       }
@@ -256,23 +265,6 @@ function App() {
 
     void refreshDirectMessages(dmState.recipientId);
   }, [dmState.recipientId, sessionReady]);
-
-  async function ensureBootstrapSession() {
-    try {
-      const result = await bootstrapSession();
-      setSessionToken(result.auth.token);
-      setSessionReady(true);
-      setStatusMessage("Connected");
-      setErrorMessage("");
-      await refreshMessages();
-      if (dmState.recipientId) {
-        await refreshDirectMessages(dmState.recipientId);
-      }
-    } catch (error) {
-      setErrorMessage(import.meta.env.DEV ? toMessage(error) : "");
-      setStatusMessage(import.meta.env.DEV ? "Offline" : "Not signed in on this device");
-    }
-  }
 
   async function refreshRoom() {
     try {
@@ -463,6 +455,40 @@ function App() {
     });
   }
 
+  function handleCircleEntrySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    startTransition(async () => {
+      try {
+        const deviceId = `device_${crypto.randomUUID()}`;
+        const identity = await createDeviceIdentity(deviceId);
+        const result = await enterCircle({
+          code: circleEntryForm.code,
+          handle: circleEntryForm.handle,
+          device: {
+            id: deviceId,
+            label: circleEntryForm.deviceLabel,
+            verificationMethod: "code",
+            publicKey: identity.publicKey
+          }
+        });
+
+        setSessionToken(result.auth.token);
+        setSessionReady(true);
+        setPendingDevice(result.device);
+        setStatusMessage(`${result.member.displayName} entered`);
+        setErrorMessage("");
+        await refreshRoom();
+        await refreshMessages();
+        if (dmState.recipientId) {
+          await refreshDirectMessages(dmState.recipientId);
+        }
+        setView("room");
+      } catch (error) {
+        setErrorMessage(toMessage(error));
+      }
+    });
+  }
+
   function handleVaultUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
@@ -584,9 +610,9 @@ function App() {
     return (
       <AppShell theme={activeTheme}>
         {!appReady ? <LoadingScreen /> : null}
-        <section className="mx-auto grid min-h-[70vh] w-full max-w-[720px] place-items-center">
-          <CalmPanel title="Log in to enter" subtitle="Use your invite code to step inside the circle.">
-            <div className="grid gap-6">
+        <section className="mx-auto grid min-h-[70vh] w-full max-w-[1120px] place-items-center">
+          <div className="grid w-full gap-6 xl:grid-cols-2">
+            <CalmPanel title="Join the circle" subtitle="First time here. Use your invite to create your profile and enter.">
               <form className="grid gap-3" onSubmit={handleRedeemSubmit}>
                 <Field label="Invite code">
                   <input
@@ -613,11 +639,53 @@ function App() {
                     }
                   />
                 </Field>
-                <ActionButton pending={isPending} label="Log in to enter" pendingLabel="Entering..." />
+                <ActionButton pending={isPending} label="Create profile and enter" pendingLabel="Joining..." />
               </form>
-              {errorMessage ? <p className="text-sm text-amber-200">{errorMessage}</p> : null}
-            </div>
-          </CalmPanel>
+            </CalmPanel>
+
+            <CalmPanel title="Enter the circle" subtitle="Already a member. Use the current circle code to get back inside.">
+              <form className="grid gap-3" onSubmit={handleCircleEntrySubmit}>
+                <Field label="Current circle code">
+                  <input
+                    className="sy-input sy-code-text"
+                    value={circleEntryForm.code}
+                    onChange={(event) =>
+                      setCircleEntryForm((current) => ({
+                        ...current,
+                        code: event.target.value
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="Call sign">
+                  <input
+                    className="sy-input"
+                    value={circleEntryForm.handle}
+                    onChange={(event) =>
+                      setCircleEntryForm((current) => ({
+                        ...current,
+                        handle: event.target.value
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="This device name">
+                  <input
+                    className="sy-input"
+                    value={circleEntryForm.deviceLabel}
+                    onChange={(event) =>
+                      setCircleEntryForm((current) => ({
+                        ...current,
+                        deviceLabel: event.target.value
+                      }))
+                    }
+                  />
+                </Field>
+                <ActionButton pending={isPending} label="Enter with circle code" pendingLabel="Entering..." />
+              </form>
+            </CalmPanel>
+          </div>
+          {errorMessage ? <p className="mt-4 text-sm text-amber-200">{errorMessage}</p> : null}
         </section>
       </AppShell>
     );
@@ -1251,6 +1319,18 @@ function toMessage(error: unknown) {
 
   if (error instanceof Error && error.message === "Valid device session required.") {
     return "This device is not signed in. Join the circle on this browser first.";
+  }
+
+  if (error instanceof Error && error.message === "Circle access code rejected.") {
+    return "That circle code is not valid right now.";
+  }
+
+  if (error instanceof Error && error.message === "Member not found for this circle.") {
+    return "No member matches that call sign.";
+  }
+
+  if (error instanceof Error && error.message === "Invite not found or already redeemed.") {
+    return "That invite code is no longer valid.";
   }
 
   return error instanceof Error ? error.message : "Unexpected error";

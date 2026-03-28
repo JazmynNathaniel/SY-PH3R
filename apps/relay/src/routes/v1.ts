@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
-import { createPublicKey, verify } from "node:crypto";
+import { createHmac, createPublicKey, verify } from "node:crypto";
 import { z } from "zod";
 import {
+  circleAccessEnterSchema,
   createInviteSchema,
   createMessageEnvelopeSchema,
   deviceVerificationSchema,
@@ -103,6 +104,40 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
     return reply.code(201).send(result);
   });
 
+  app.post("/v1/circle-access/enter", async (request, reply) => {
+    const payload = circleAccessEnterSchema.parse(request.body);
+    const configuredSecret = process.env.CIRCLE_CODE_SECRET ?? process.env.SESSION_SECRET;
+
+    if (!configuredSecret) {
+      return reply.code(503).send({ error: "Circle code access is not configured." });
+    }
+
+    if (!isValidCircleCode(payload.code, configuredSecret)) {
+      return reply.code(401).send({ error: "Circle access code rejected." });
+    }
+
+    const member = storage.findMemberByHandle(payload.handle);
+    if (!member) {
+      return reply.code(404).send({ error: "Member not found for this circle." });
+    }
+
+    const entered = storage.enterCircle(member.id, {
+      id: payload.device.id,
+      memberId: member.id,
+      label: payload.device.label,
+      verificationMethod: payload.device.verificationMethod,
+      publicKey: payload.device.publicKey,
+      verifiedAt: null,
+      revokedAt: null
+    });
+
+    if (!entered) {
+      return reply.code(400).send({ error: "Could not enter the circle on this device." });
+    }
+
+    return reply.code(201).send(entered);
+  });
+
   app.post("/v1/devices/verify", async (request, reply) => {
     const payload = deviceVerificationSchema.parse(request.body);
     const device = storage.getDevice(payload.deviceId);
@@ -198,4 +233,29 @@ function verifyDeviceProof(payload: {
     publicKey,
     Buffer.from(payload.signature, "base64")
   );
+}
+
+function isValidCircleCode(input: string, secret: string) {
+  const normalizedInput = normalizeCircleCode(input);
+  const currentWindow = Math.floor(Date.now() / (2 * 60 * 60 * 1000));
+
+  for (const windowOffset of [0, -1]) {
+    const candidate = buildCircleCode(secret, currentWindow + windowOffset);
+    if (candidate === normalizedInput) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function buildCircleCode(secret: string, windowSlot: number) {
+  const material = createHmac("sha256", secret).update(`circle:${windowSlot}`).digest("base64url");
+  const compact = material.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  return `${compact.slice(0, 4)}-${compact.slice(4, 8)}`;
+}
+
+function normalizeCircleCode(value: string) {
+  const compact = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  return `${compact.slice(0, 4)}-${compact.slice(4, 8)}`;
 }

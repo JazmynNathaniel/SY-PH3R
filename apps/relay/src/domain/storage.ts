@@ -30,6 +30,8 @@ export type RelayStorage = {
   createInvite(input: CreateInviteInput, createdByMemberId: string): InviteRecord;
   createInitialProfile(member: MemberProfile, device: DeviceRecord): { member: MemberProfile; device: DeviceRecord; session: SessionRecord; auth: SessionAuth } | null;
   redeemInvite(code: string, member: MemberProfile, device: DeviceRecord): RedeemInviteResult | null;
+  findMemberByHandle(handle: string): MemberProfile | null;
+  enterCircle(memberId: string, device: DeviceRecord): { member: MemberProfile; device: DeviceRecord; session: SessionRecord; auth: SessionAuth } | null;
   getDevice(deviceId: string): DeviceRecord | null;
   verifyDevice(event: Omit<DeviceVerificationEvent, "id" | "createdAt">): DeviceVerificationEvent | null;
   authenticateSessionToken(token: string): SessionRecord | null;
@@ -164,6 +166,20 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
     ORDER BY rowid ASC
   `);
 
+  const findMemberByHandleStatement = db.prepare(`
+    SELECT
+      id,
+      display_name AS displayName,
+      handle,
+      accent,
+      layout,
+      photo_url AS photoUrl,
+      badge
+    FROM members
+    WHERE lower(handle) = lower(?)
+    LIMIT 1
+  `);
+
   const getMainRoomStatement = db.prepare(`
     SELECT
       id,
@@ -263,6 +279,40 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
     }
   );
 
+  const enterCircleTransaction = db.transaction((memberId: string, device: DeviceRecord) => {
+    const member = db.prepare(`
+      SELECT
+        id,
+        display_name AS displayName,
+        handle,
+        accent,
+        layout,
+        photo_url AS photoUrl,
+        badge
+      FROM members
+      WHERE id = ?
+      LIMIT 1
+    `).get(memberId) as MemberProfile | undefined;
+
+    if (!member) {
+      return null;
+    }
+
+    insertDevice.run(device);
+
+    const issued = issueSessionInternal(device.id);
+    if (!issued) {
+      return null;
+    }
+
+    return {
+      member,
+      device,
+      session: issued.session,
+      auth: issued.auth
+    };
+  });
+
   return {
     createInvite(input, createdByMemberId) {
       const invite: InviteRecord = {
@@ -281,6 +331,12 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
     },
     redeemInvite(code, member, device) {
       return redeemInviteTransaction(code, member, device);
+    },
+    findMemberByHandle(handle) {
+      return (findMemberByHandleStatement.get(handle) as MemberProfile | undefined) ?? null;
+    },
+    enterCircle(memberId, device) {
+      return enterCircleTransaction(memberId, device);
     },
     getDevice(deviceId) {
       return (findDevice.get(deviceId) as DeviceRecord | undefined) ?? null;

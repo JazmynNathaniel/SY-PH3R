@@ -65,6 +65,19 @@ export const inviteRedeemSchema = z.object({
   device: deviceRecordSchema
 });
 
+export const circleAccessDeviceInputSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(80),
+  verificationMethod: z.enum(["qr", "code"]),
+  publicKey: z.string().min(32)
+});
+
+export const circleAccessEnterSchema = z.object({
+  code: z.string().min(6).max(32),
+  handle: z.string().min(1).max(48),
+  device: circleAccessDeviceInputSchema
+});
+
 export const deviceVerificationSchema = z.object({
   deviceId: z.string().min(1),
   method: z.enum(["qr", "code"]),

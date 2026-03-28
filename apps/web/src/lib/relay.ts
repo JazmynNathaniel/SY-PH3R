@@ -1,4 +1,5 @@
 import type {
+  CircleAccessEnterInput,
   CreateInviteInput,
   CreateMessageEnvelopeInput,
   DeviceRecord,
@@ -49,6 +50,18 @@ export async function redeemInvite(payload: RedeemInvitePayload) {
     session: SessionRecord;
     auth: SessionAuth;
   }>("/v1/invites/redeem", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function enterCircle(payload: CircleAccessEnterInput) {
+  return request<{
+    member: MemberProfile;
+    device: DeviceRecord;
+    session: SessionRecord;
+    auth: SessionAuth;
+  }>("/v1/circle-access/enter", {
     method: "POST",
     body: JSON.stringify(payload)
   });
