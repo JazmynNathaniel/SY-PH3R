@@ -9,7 +9,7 @@ export const memberProfileSchema = z.object({
   accent: z.enum(PERSONALIZATION_PRESET_IDS),
   layout: z.enum(["constellation", "archive", "signal"]),
   photoUrl: z.string(),
-  badge: z.enum(["verified", "founding"])
+  badge: z.enum(["verified"])
 });
 
 export const deviceRecordSchema = z.object({

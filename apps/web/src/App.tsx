@@ -227,7 +227,7 @@ function App() {
         if (import.meta.env.DEV) {
           await ensureBootstrapSession();
         } else {
-          setStatusMessage("Invite required");
+          setStatusMessage("Not signed in on this device");
           setMessageStatus("Join the circle to start chatting");
         }
       } else {
@@ -270,7 +270,7 @@ function App() {
       }
     } catch (error) {
       setErrorMessage(import.meta.env.DEV ? toMessage(error) : "");
-      setStatusMessage(import.meta.env.DEV ? "Offline" : "Invite required");
+      setStatusMessage(import.meta.env.DEV ? "Offline" : "Not signed in on this device");
     }
   }
 
@@ -844,7 +844,7 @@ function App() {
               <div className="grid gap-3">
                 <StatusCard
                   title="Access"
-                  value={sessionReady ? "Joined circle" : "Invite required"}
+                  value={sessionReady ? "Joined circle" : "Not signed in on this device"}
                 />
                 <StatusCard title="Room" value={room?.room.title ?? "Main room"} />
               </div>
@@ -931,7 +931,6 @@ function App() {
                   >
                     <option value="">Select member</option>
                     {members
-                      .filter((member) => member.id !== "member_iris")
                       .map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.displayName}
@@ -1402,6 +1401,10 @@ function formatTimestamp(value: string | null) {
 function toMessage(error: unknown) {
   if (error instanceof TypeError) {
     return "Relay offline. Start the local relay to sync.";
+  }
+
+  if (error instanceof Error && error.message === "Valid device session required.") {
+    return "This device is not signed in. Join the circle on this browser first.";
   }
 
   return error instanceof Error ? error.message : "Unexpected error";

@@ -7,7 +7,7 @@ export type MemberProfile = {
   accent: PersonalizationPresetId;
   layout: "constellation" | "archive" | "signal";
   photoUrl: string;
-  badge: "verified" | "founding";
+  badge: "verified";
 };
 
 export type DeviceRecord = {

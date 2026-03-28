@@ -435,7 +435,7 @@ function seedBootstrapState(db: Database.Database) {
 
   db.prepare(`
     INSERT INTO members (id, display_name, handle, accent, layout, photo_url, badge)
-    VALUES ('member_iris', 'Iris', 'observer', 'sea-glow', 'constellation', '', 'founding')
+    VALUES ('member_iris', 'Iris', 'observer', 'sea-glow', 'constellation', '', 'verified')
   `).run();
 
   db.prepare(`
