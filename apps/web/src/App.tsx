@@ -571,14 +571,13 @@ function App() {
   const currentMember = members.find((member) => member.id === pendingDevice?.memberId) ?? members[0] ?? null;
   const selectedDirectName = dmState.recipientId ? resolveMemberName(members, dmState.recipientId) : "No member selected";
   const activePreset = UI_THEME_PRESETS.find((preset) => preset.id === activeTheme) ?? UI_THEME_PRESETS[0];
-  const activeView = sessionReady ? view : "getting-started";
+  const activeView = sessionReady ? (view === "getting-started" ? "home" : view) : "getting-started";
   const navItems = [
     { id: "home", label: "Home" },
-    { id: "getting-started", label: "Getting Started" },
     { id: "room", label: "Chat" },
     { id: "direct", label: "Direct Messages" },
     { id: "identity", label: "Profile" },
-    { id: "security", label: "Settings" }
+    { id: "security", label: "Circle" }
   ];
 
   if (!sessionReady) {
@@ -643,7 +642,7 @@ function App() {
               <SecurityStatusBadge label={statusMessage} tone="secure" />
             </div>
             <div className="flex flex-wrap gap-3">
-              <SecurityStatusBadge label={sessionReady ? "ready to chat" : "join required"} tone="active" />
+              <SecurityStatusBadge label="inside the circle" tone="active" />
               <SecurityStatusBadge label={`${memberCount}/5 members`} tone="alert" />
               <SecurityStatusBadge label={vaultUnlocked ? "vault unlocked" : "vault locked"} tone="active" />
             </div>
@@ -675,9 +674,9 @@ function App() {
                 <ActionCard title="Open chat" description="Everyone in one room" onClick={() => setView("room")} />
                 <ActionCard title="Direct messages" description="One person at a time" onClick={() => setView("direct")} />
                 <ActionCard
-                  title={sessionReady ? "Open circle" : "Join the circle"}
-                  description={sessionReady ? "See who is inside and manage invites." : "Use your invite code to get inside."}
-                  onClick={() => setView(sessionReady ? "security" : "getting-started")}
+                  title="Open circle"
+                  description="See who is inside and manage invites."
+                  onClick={() => setView("security")}
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-3">
@@ -687,12 +686,16 @@ function App() {
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="sy-info-card rounded-[24px] p-5">
-                  <p className="sy-terminal-label">Latest room status</p>
-                  <p className="mt-3 text-base text-text-primary">{messageStatus}</p>
+                  <p className="sy-terminal-label">Room</p>
+                  <p className="mt-3 text-base text-text-primary">
+                    {roomMessages.length === 0 ? "No messages yet. Start the room." : messageStatus}
+                  </p>
                 </div>
                 <div className="sy-info-card rounded-[24px] p-5">
-                  <p className="sy-terminal-label">Draft vault</p>
-                  <p className="mt-3 text-base text-text-primary">{vaultStatus}</p>
+                  <p className="sy-terminal-label">Circle</p>
+                  <p className="mt-3 text-base text-text-primary">
+                    {memberCount === 1 ? "You are the only member inside." : `${memberCount} members are inside.`}
+                  </p>
                 </div>
               </div>
             </div>
@@ -722,97 +725,13 @@ function App() {
         </section>
       ) : null}
 
-      {activeView === "getting-started" ? (
-        <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
-          <CalmPanel title="Getting Started" subtitle="Join the circle and step straight into chat">
-            <div className="grid gap-6">
-              <div className="sy-info-card rounded-[24px] p-5">
-                <p className="sy-terminal-label">SOPM</p>
-                <div className="mt-4 grid gap-3">
-                  {[
-                    "Read every message like orders from the captain: clear, respectful, and steady.",
-                    "Keep the room warm enough to feel human. A joke is welcome; turning the channel into a circus is not.",
-                    "Bring relevant, inspiring topics when the room goes quiet. Add signal, not filler.",
-                    "Friendly fire is not tolerated. Challenge ideas cleanly, never the people in the circle.",
-                    "THIS IS STRICTLY CONFIDENTIAL."
-                  ].map((order) => (
-                    <p key={order} className="text-sm leading-7 text-text-secondary">
-                      {order}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="sy-step-card rounded-[24px] px-5 py-5">
-                <p className="sy-terminal-label">Join Flow</p>
-                <div className="mt-4 grid gap-3">
-                  {[
-                    "Paste your invite code.",
-                    "Choose your display name and this device name.",
-                    "Join the circle.",
-                    "You are taken straight into chat."
-                  ].map((step, index) => (
-                    <div key={step} className="flex items-start gap-4">
-                      <div className="sy-step-index">{index + 1}</div>
-                      <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CalmPanel>
-
-          <CalmPanel title="Join The Circle" subtitle="Use your invite code and step straight inside">
-            <div className="grid gap-6">
-              <div className="grid gap-4">
-                <SectionHeader title="Join the circle" subtitle="Use your invite code and step straight inside." />
-                <form className="grid gap-3" onSubmit={handleRedeemSubmit}>
-                  <Field label="Invite code">
-                    <input
-                      className="sy-input sy-code-text"
-                      value={redeemForm.code}
-                      onChange={(event) => setRedeemForm((current) => ({ ...current, code: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Display name">
-                    <input
-                      className="sy-input"
-                      value={redeemForm.displayName}
-                      onChange={(event) =>
-                        setRedeemForm((current) => ({ ...current, displayName: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label="This device name">
-                    <input
-                      className="sy-input"
-                      value={redeemForm.deviceLabel}
-                      onChange={(event) =>
-                        setRedeemForm((current) => ({ ...current, deviceLabel: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <ActionButton pending={isPending} label="Join circle" pendingLabel="Joining..." />
-                </form>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <ActionCard title="Open chat" description="Go to the shared conversation." onClick={() => setView("room")} />
-                <ActionCard title="Open direct messages" description="Start a private conversation." onClick={() => setView("direct")} />
-                <ActionCard title="Open circle" description="Manage invites and see who is inside." onClick={() => setView("security")} />
-              </div>
-            </div>
-          </CalmPanel>
-        </section>
-      ) : null}
-
       {activeView === "room" ? (
         <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <div className="grid content-start gap-4">
             <CalmPanel title="Members" subtitle="Everyone in the room">
               <div className="grid gap-3">
                 {members.length === 0 ? (
-                  <EmptyPanel text="No members available." />
+                  <EmptyPanel text="No one is inside yet." />
                 ) : (
                   members.map((member) => (
                     <div key={member.id} className="sy-info-card rounded-[22px] px-4 py-4">
@@ -867,7 +786,7 @@ function App() {
               <div className="sy-chat-feed min-h-[540px] rounded-[26px] p-4 md:p-6">
                 <div className="mx-auto max-w-[760px] space-y-3">
                   {roomMessages.length === 0 ? (
-                    <EmptyPanel text="No messages are ready to read yet." />
+                    <EmptyPanel text="No messages yet. Start the room." />
                   ) : (
                     roomMessages.map((message, index) => (
                       <MessageItem
@@ -929,7 +848,7 @@ function App() {
                 </Field>
                 <StatusCard
                   title="Access"
-                  value={dmState.recipientId ? "Conversation ready" : "Choose a member"}
+                  value={dmState.recipientId ? "Conversation ready" : "Choose someone"}
                 />
               </div>
             </CalmPanel>
@@ -937,7 +856,7 @@ function App() {
             <CalmPanel title="Available members" subtitle="Choose who to message">
               <div className="grid gap-3">
                 {members.length === 0 ? (
-                  <EmptyPanel text="No members available." />
+                  <EmptyPanel text="No one else is inside yet." />
                 ) : (
                   members.map((member) => (
                     <div key={member.id} className="sy-info-card rounded-[22px] px-4 py-4">
@@ -954,7 +873,7 @@ function App() {
               </div>
             </CalmPanel>
 
-            <ResultBlock title="Direct messages" body={dmState.status} meta={`${dmState.envelopes.length} saved`} />
+            <ResultBlock title="Direct messages" body={dmState.status} meta={`${dmState.envelopes.length} messages`} />
           </div>
 
           <CalmPanel title="Direct messages" subtitle="Private conversation">
@@ -968,7 +887,7 @@ function App() {
               <div className="sy-chat-feed min-h-[540px] rounded-[26px] p-4 md:p-6">
                 <div className="mx-auto max-w-[760px] space-y-3">
                   {dmState.messages.length === 0 ? (
-                    <EmptyPanel text="No direct messages are ready to read yet." />
+                    <EmptyPanel text="No direct messages yet." />
                   ) : (
                     dmState.messages.map((message, index) => (
                       <MessageItem
@@ -1061,7 +980,7 @@ function App() {
 
       {activeView === "security" ? (
         <section className="grid gap-6 xl:grid-cols-2">
-          <CalmPanel title="Settings" subtitle="Invites and devices">
+          <CalmPanel title="Circle" subtitle="Invites and members">
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <form className="grid gap-3" onSubmit={handleCreateInviteSubmit}>
@@ -1096,75 +1015,13 @@ function App() {
               </div>
 
               <div className="grid gap-6">
-                <form className="grid gap-3" onSubmit={handleRedeemSubmit}>
-                  <Field label="Invite code">
-                    <input
-                      className="sy-input sy-code-text"
-                      value={redeemForm.code}
-                      onChange={(event) => setRedeemForm((current) => ({ ...current, code: event.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Display name">
-                    <input
-                      className="sy-input"
-                      value={redeemForm.displayName}
-                      onChange={(event) =>
-                        setRedeemForm((current) => ({ ...current, displayName: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label="This device name">
-                    <input
-                      className="sy-input"
-                      value={redeemForm.deviceLabel}
-                      onChange={(event) =>
-                        setRedeemForm((current) => ({ ...current, deviceLabel: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Profile style">
-                      <select
-                        className="sy-input"
-                        value={redeemForm.layout}
-                        onChange={(event) =>
-                          setRedeemForm((current) => ({
-                            ...current,
-                            layout: event.target.value as RedeemInviteForm["layout"]
-                          }))
-                        }
-                      >
-                        <option value="constellation">Constellation</option>
-                        <option value="archive">Archive</option>
-                        <option value="signal">Signal</option>
-                      </select>
-                    </Field>
-                    <Field label="Accent">
-                      <select
-                        className="sy-input"
-                        value={redeemForm.accent}
-                        onChange={(event) =>
-                          setRedeemForm((current) => ({
-                            ...current,
-                            accent: event.target.value as PersonalizationPresetId
-                          }))
-                        }
-                      >
-                        <option value="sea-glow">Sea Glow</option>
-                        <option value="ember-signal">Ember Signal</option>
-                        <option value="moon-glass">Moon Glass</option>
-                      </select>
-                    </Field>
-                  </div>
-                  <ActionButton pending={isPending} label="Join circle" pendingLabel="Joining..." />
-                </form>
-
                 <div className="grid gap-3">
                   <ResultBlock
-                    title="Current device"
+                    title="This device"
                     body={pendingDevice?.label ?? "No device joined on this browser yet"}
-                    meta={pendingDevice ? "Chat access is active on this device" : "Join with an invite to activate chat"}
+                    meta={pendingDevice ? "Chat access is active on this browser" : "Join with an invite to activate chat"}
                   />
+                  <ResultBlock title="Circle status" body={`${memberCount}/5 members`} meta="Any current member can issue the next invite." />
                 </div>
               </div>
             </div>
