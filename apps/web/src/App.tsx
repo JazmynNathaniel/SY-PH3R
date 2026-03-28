@@ -658,7 +658,7 @@ function App() {
       <ViewTabs
         items={navItems}
         view={activeView}
-        onChange={setView}
+        onChange={(nextView) => setView(nextView as AppView)}
       />
 
       {activeView === "home" ? (
