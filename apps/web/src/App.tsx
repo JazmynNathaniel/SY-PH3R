@@ -705,22 +705,41 @@ function App() {
       {view === "getting-started" ? (
         <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
           <CalmPanel title="Getting Started" subtitle="How to use the app">
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                "Create or receive an invite.",
-                "Redeem the invite on this device.",
-                "Verify the device with a secure code or QR flow.",
-                "Unlock the room or a direct chat with the shared key.",
-                "Read messages in the main timeline and send from the composer at the bottom.",
-                "Use Settings for invites, saved drafts, and device status."
-              ].map((step, index) => (
-                <div key={step} className="sy-step-card rounded-[24px] px-4 py-4">
-                  <div className="flex items-start gap-4">
-                    <div className="sy-step-index">{index + 1}</div>
-                    <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
-                  </div>
+            <div className="grid gap-6">
+              <div className="sy-info-card rounded-[24px] p-5">
+                <p className="sy-terminal-label">SOPM</p>
+                <div className="mt-4 grid gap-3">
+                  {[
+                    "Read every message like orders from the captain: clear, respectful, and steady.",
+                    "Keep the room warm enough to feel human. A joke is welcome; turning the channel into a circus is not.",
+                    "Bring relevant, inspiring topics when the room goes quiet. Add signal, not filler.",
+                    "Friendly fire is not tolerated. Challenge ideas cleanly, never the people in the circle.",
+                    "THIS IS STRICTLY CONFIDENTIAL."
+                  ].map((order) => (
+                    <p key={order} className="text-sm leading-7 text-text-secondary">
+                      {order}
+                    </p>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {[
+                  "Create or receive an invite.",
+                  "Join the circle on this device.",
+                  "Verify this device with a secure code or QR flow.",
+                  "Unlock the room or a direct chat with the shared key.",
+                  "Read messages in the main timeline and send from the composer at the bottom.",
+                  "Use Settings for invites, saved drafts, and device status."
+                ].map((step, index) => (
+                  <div key={step} className="sy-step-card rounded-[24px] px-4 py-4">
+                    <div className="flex items-start gap-4">
+                      <div className="sy-step-index">{index + 1}</div>
+                      <p className="pt-1 text-sm leading-7 text-text-secondary">{step}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CalmPanel>
 
