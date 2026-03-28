@@ -28,8 +28,20 @@ export type MainRoomResponse = {
   members: MemberProfile[];
 };
 
+export type CircleAccessStatus = {
+  code: string;
+  nextRotationAt: string;
+  windowHours: number;
+};
+
 export async function fetchMainRoom() {
   return request<MainRoomResponse>("/v1/rooms/main");
+}
+
+export async function fetchCurrentCircleCode() {
+  return request<CircleAccessStatus>("/v1/circle-access/current", {
+    auth: true
+  });
 }
 
 export async function createInvite(input: CreateInviteInput) {
@@ -102,14 +114,6 @@ export async function fetchEnvelopes(roomId: string) {
       auth: true
     }
   );
-}
-
-export async function bootstrapSession() {
-  const result = await request<{ session: SessionRecord; auth: SessionAuth }>(
-    "/v1/dev/bootstrap-session"
-  );
-  setSessionToken(result.auth.token);
-  return result;
 }
 
 export function setSessionToken(token: string) {

@@ -32,6 +32,7 @@ import {
   createInvite,
   enterCircle,
   fetchEnvelopes,
+  fetchCurrentCircleCode,
   fetchMainRoom,
   getSessionToken,
   redeemInvite,
@@ -86,6 +87,12 @@ type DirectMessageState = {
   status: string;
   envelopes: MessageEnvelope[];
   messages: DecryptedRoomMessage[];
+};
+
+type CircleCodeState = {
+  code: string;
+  nextRotationAt: string;
+  windowHours: number;
 };
 
 type AppView = "home" | "getting-started" | "room" | "direct" | "identity" | "security";
@@ -200,6 +207,7 @@ function App() {
   const [circleEntryForm, setCircleEntryForm] = useState<CircleEntryForm>(initialCircleEntryForm);
   const [createdInvite, setCreatedInvite] = useState<InviteRecord | null>(null);
   const [inviteShareStatus, setInviteShareStatus] = useState("");
+  const [circleCodeState, setCircleCodeState] = useState<CircleCodeState | null>(null);
   const [pendingDevice, setPendingDevice] = useState<DeviceRecord | null>(null);
   const [statusMessage, setStatusMessage] = useState("Connecting");
   const [errorMessage, setErrorMessage] = useState("");
@@ -241,6 +249,7 @@ function App() {
         setMessageStatus("Join the circle to start chatting");
       } else {
         await refreshMessages();
+        await refreshCircleCode();
       }
 
       const elapsed = Date.now() - startedAt;
@@ -265,6 +274,15 @@ function App() {
 
     void refreshDirectMessages(dmState.recipientId);
   }, [dmState.recipientId, sessionReady]);
+
+  useEffect(() => {
+    if (!sessionReady) {
+      setCircleCodeState(null);
+      return;
+    }
+
+    void refreshCircleCode();
+  }, [sessionReady]);
 
   async function refreshRoom() {
     try {
@@ -301,6 +319,20 @@ function App() {
     } catch (error) {
       setRoomMessages([]);
       setMessageStatus(toMessage(error));
+    }
+  }
+
+  async function refreshCircleCode() {
+    if (!getSessionToken()) {
+      setCircleCodeState(null);
+      return;
+    }
+
+    try {
+      const status = await fetchCurrentCircleCode();
+      setCircleCodeState(status);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
     }
   }
 
@@ -445,6 +477,7 @@ function App() {
         setErrorMessage("");
         await refreshRoom();
         await refreshMessages();
+        await refreshCircleCode();
         if (dmState.recipientId) {
           await refreshDirectMessages(dmState.recipientId);
         }
@@ -479,6 +512,7 @@ function App() {
         setErrorMessage("");
         await refreshRoom();
         await refreshMessages();
+        await refreshCircleCode();
         if (dmState.recipientId) {
           await refreshDirectMessages(dmState.recipientId);
         }
@@ -1090,6 +1124,28 @@ function App() {
                     meta={pendingDevice ? "Chat access is active on this browser" : "Join with an invite to activate chat"}
                   />
                   <ResultBlock title="Circle status" body={`${memberCount}/5 members`} meta="Any current member can issue the next invite." />
+                  <ResultBlock
+                    title="Current circle code"
+                    body={circleCodeState?.code ?? "Loading..."}
+                    meta={
+                      circleCodeState
+                        ? `Rotates ${formatTimestamp(circleCodeState.nextRotationAt)} · valid for ${circleCodeState.windowHours} hours`
+                        : "Load the current member re-entry code"
+                    }
+                  />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <CyberButton
+                      label="Copy circle code"
+                      onClick={() => {
+                        if (!circleCodeState) {
+                          return;
+                        }
+
+                        void copyToClipboard(circleCodeState.code, "Circle code copied");
+                      }}
+                    />
+                    <CyberButton label="Refresh code" onClick={() => void refreshCircleCode()} />
+                  </div>
                 </div>
               </div>
             </div>

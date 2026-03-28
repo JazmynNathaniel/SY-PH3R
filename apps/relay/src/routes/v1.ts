@@ -138,6 +138,23 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
     return reply.code(201).send(entered);
   });
 
+  app.get("/v1/circle-access/current", { preHandler: requireSession }, async (_request, reply) => {
+    const configuredSecret = process.env.CIRCLE_CODE_SECRET ?? process.env.SESSION_SECRET;
+
+    if (!configuredSecret) {
+      return reply.code(503).send({ error: "Circle code access is not configured." });
+    }
+
+    const currentWindow = Math.floor(Date.now() / (2 * 60 * 60 * 1000));
+    const nextRotationAt = new Date((currentWindow + 1) * 2 * 60 * 60 * 1000).toISOString();
+
+    return {
+      code: buildCircleCode(configuredSecret, currentWindow),
+      nextRotationAt,
+      windowHours: 2
+    };
+  });
+
   app.post("/v1/devices/verify", async (request, reply) => {
     const payload = deviceVerificationSchema.parse(request.body);
     const device = storage.getDevice(payload.deviceId);
