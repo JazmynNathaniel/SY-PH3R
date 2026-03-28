@@ -9,6 +9,7 @@ AGENTS.md
 .env.*.local
 apps/*/.env
 apps/*/.env.local
+apps/*/.env.example
 *.tsbuildinfo
 npm-debug.log*
 apps/relay/data/*.db

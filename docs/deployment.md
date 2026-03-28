@@ -82,3 +82,24 @@ If path-based client-side routing is added later, add a Vercel rewrite so direct
 - The frontend will fail gracefully with a clear error if `VITE_RELAY_URL` is missing in production.
 - Do not place relay secrets in `VITE_*` variables.
 - If future backend logic is moved closer to Vercel, prefer minimal Vercel Functions for narrow privacy-aware tasks, not a plaintext message backend.
+
+## Render Relay Deployment
+
+Deploy the relay as a Render Web Service from the monorepo root so workspace dependencies resolve correctly.
+
+- Root Directory: repo root
+- Build Command: `npm ci --workspaces --include-workspace-root && npm run build --workspace @sy-ph3r/relay`
+- Start Command: `npm run start --workspace @sy-ph3r/relay`
+
+Required environment variables on Render:
+
+- `NODE_ENV=production`
+- `HOST=0.0.0.0`
+- `SESSION_SECRET=<long-random-secret>`
+- `DB_PATH=./apps/relay/data/sy-ph3r.db`
+
+Notes:
+
+- Render provides `PORT` automatically for web services.
+- `HOST` must be `0.0.0.0` so the service binds to Render's network interface.
+- `DB_PATH` points at a local SQLite file; attach a persistent disk if you want relay data to survive redeploys or restarts.
