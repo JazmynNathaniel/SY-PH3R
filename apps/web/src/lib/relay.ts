@@ -98,6 +98,18 @@ export async function bootstrapSession() {
   return result;
 }
 
+export async function operatorBootstrapSession(secret: string) {
+  const result = await request<{ session: SessionRecord; auth: SessionAuth }>(
+    "/v1/operator/bootstrap-session",
+    {
+      method: "POST",
+      body: JSON.stringify({ secret })
+    }
+  );
+  setSessionToken(result.auth.token);
+  return result;
+}
+
 export function setSessionToken(token: string) {
   sessionStorage.setItem(SESSION_STORAGE_KEY, token);
 }

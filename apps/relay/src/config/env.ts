@@ -5,6 +5,7 @@ const envSchema = z.object({
   HOST: z.string().min(1).default("127.0.0.1"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   SESSION_SECRET: z.string().min(24, "SESSION_SECRET must be at least 24 characters"),
+  OPERATOR_BOOTSTRAP_SECRET: z.string().min(24).optional(),
   DB_PATH: z.string().min(1).default("./data/sy-ph3r.db")
 });
 

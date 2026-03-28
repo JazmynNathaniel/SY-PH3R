@@ -36,6 +36,26 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
     return reply.code(201).send(issued);
   });
 
+  app.post("/v1/operator/bootstrap-session", async (request, reply) => {
+    const payload = request.body as { secret?: string } | undefined;
+    const expectedSecret = process.env.OPERATOR_BOOTSTRAP_SECRET;
+
+    if (!expectedSecret) {
+      return reply.code(403).send({ error: "Operator bootstrap is not configured." });
+    }
+
+    if (payload?.secret !== expectedSecret) {
+      return reply.code(401).send({ error: "Operator secret rejected." });
+    }
+
+    const issued = storage.issueSession("device_iris_studio");
+    if (!issued) {
+      return reply.code(404).send({ error: "Bootstrap device not found." });
+    }
+
+    return reply.code(201).send(issued);
+  });
+
   app.post("/v1/invites", { preHandler: requireSession }, async (request, reply) => {
     const payload = createInviteSchema.parse(request.body);
     const created = storage.createInvite(payload);

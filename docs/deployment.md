@@ -96,10 +96,12 @@ Required environment variables on Render:
 - `NODE_ENV=production`
 - `HOST=0.0.0.0`
 - `SESSION_SECRET=<long-random-secret>`
+- `OPERATOR_BOOTSTRAP_SECRET=<separate-long-random-secret>`
 - `DB_PATH=./apps/relay/data/sy-ph3r.db`
 
 Notes:
 
 - Render provides `PORT` automatically for web services.
 - `HOST` must be `0.0.0.0` so the service binds to Render's network interface.
+- `OPERATOR_BOOTSTRAP_SECRET` is used once from the frontend security screen to acquire the founding session and issue the first invites.
 - `DB_PATH` points at a local SQLite file; attach a persistent disk if you want relay data to survive redeploys or restarts.
