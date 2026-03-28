@@ -1,0 +1,22 @@
+{
+  "name": "sy-ph3r",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SY-PH3R secure private communication MVP scaffold",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspace @sy-ph3r/web",
+    "dev:web": "npm run dev --workspace @sy-ph3r/web",
+    "dev:relay": "npm run dev --workspace @sy-ph3r/relay",
+    "check": "npm run check --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
+
