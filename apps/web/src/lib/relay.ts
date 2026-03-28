@@ -110,6 +110,10 @@ type RequestInitWithAuth = RequestInit & {
   auth?: boolean;
 };
 
+type RelayErrorPayload = {
+  error?: string;
+};
+
 async function request<T>(path: string, init?: RequestInitWithAuth) {
   if (!RELAY_URL) {
     throw new Error("Missing VITE_RELAY_URL. Set the relay URL in your deployment environment.");
@@ -127,7 +131,19 @@ async function request<T>(path: string, init?: RequestInitWithAuth) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Relay request failed with status ${response.status}`);
+
+    if (text) {
+      try {
+        const parsed = JSON.parse(text) as RelayErrorPayload;
+        if (parsed.error) {
+          throw new Error(parsed.error);
+        }
+      } catch {
+        throw new Error(text);
+      }
+    }
+
+    throw new Error(`Relay request failed with status ${response.status}`);
   }
 
   return (await response.json()) as T;

@@ -239,7 +239,12 @@ function App() {
       await refreshRoom();
 
       if (!getSessionToken()) {
-        await ensureBootstrapSession();
+        if (import.meta.env.DEV) {
+          await ensureBootstrapSession();
+        } else {
+          setStatusMessage("Invite required");
+          setMessageStatus("Join with an invite to sync messages");
+        }
       } else {
         await refreshMessages(roomSecret);
       }
@@ -271,8 +276,8 @@ function App() {
         await refreshDirectMessages(dmState.recipientId, dmState.secret);
       }
     } catch (error) {
-      setErrorMessage(toMessage(error));
-      setStatusMessage("Offline");
+      setErrorMessage(import.meta.env.DEV ? toMessage(error) : "");
+      setStatusMessage(import.meta.env.DEV ? "Offline" : "Invite required");
     }
   }
 
