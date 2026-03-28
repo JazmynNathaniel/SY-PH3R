@@ -11,3 +11,4 @@ apps/*/.env.local
 *.tsbuildinfo
 npm-debug.log*
 apps/relay/data/*.db
+apps/relay/relay.log
