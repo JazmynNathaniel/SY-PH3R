@@ -57,6 +57,12 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
   });
 
   app.post("/v1/invites", { preHandler: requireSession }, async (request, reply) => {
+    const room = storage.getMainRoom();
+    const memberCount = storage.listRoomMembers().length;
+    if (memberCount >= room.membershipCap) {
+      return reply.code(409).send({ error: "The circle is already full." });
+    }
+
     const session = getSessionFromRequest(storage, request.headers.authorization);
     const device = session ? storage.getDevice(session.deviceId) : null;
     if (!device) {
@@ -73,6 +79,12 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
   });
 
   app.post("/v1/invites/redeem", async (request, reply) => {
+    const room = storage.getMainRoom();
+    const memberCount = storage.listRoomMembers().length;
+    if (memberCount >= room.membershipCap) {
+      return reply.code(409).send({ error: "The circle is already full." });
+    }
+
     const payload = inviteRedeemSchema.parse(request.body);
     const result = storage.redeemInvite(payload.code, payload.member, payload.device);
 

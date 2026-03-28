@@ -25,7 +25,7 @@ import {
   ViewTabs
 } from "./components/ui/surface-primitives";
 import { EMPTY_DRAFT_VAULT, upsertDraft, type DraftRecord, type DraftVaultState } from "./domain/drafts";
-import { createDeviceIdentity, signDeviceProof } from "./lib/deviceIdentity";
+import { createDeviceIdentity } from "./lib/deviceIdentity";
 import { hasStoredDraftVault, loadDraftVault, saveDraftVault } from "./lib/localVault";
 import { decryptRoomMessage, encryptRoomMessage } from "./lib/messageCrypto";
 import {
@@ -37,7 +37,6 @@ import {
   redeemInvite,
   sendEnvelope,
   setSessionToken,
-  verifyDevice
 } from "./lib/relay";
 
 type CreateInviteForm = {
@@ -51,12 +50,6 @@ type RedeemInviteForm = {
   accent: PersonalizationPresetId;
   layout: "constellation" | "archive" | "signal";
   deviceLabel: string;
-  verificationMethod: "qr" | "code";
-};
-
-type VerifyForm = {
-  method: "qr" | "code";
-  proof: string;
 };
 
 type DraftComposerState = {
@@ -83,7 +76,6 @@ type DecryptedRoomMessage = {
 
 type DirectMessageState = {
   recipientId: string;
-  secret: string;
   body: string;
   status: string;
   envelopes: MessageEnvelope[];
@@ -112,19 +104,15 @@ const initialRedeemForm: RedeemInviteForm = {
   displayName: "",
   accent: "sea-glow",
   layout: "constellation",
-  deviceLabel: "New device",
-  verificationMethod: "qr"
-};
-
-const initialVerifyForm: VerifyForm = {
-  method: "qr",
-  proof: "room-seal-001"
+  deviceLabel: "My device"
 };
 
 const initialDraftComposer: DraftComposerState = {
   body: "",
   disappearingWindow: "24h"
 };
+
+const DEFAULT_ROOM_SECRET = "sy-ph3r-room-main";
 
 const UI_THEME_PRESETS: Array<{
   id: UiThemeId;
@@ -197,7 +185,6 @@ function App() {
   const [room, setRoom] = useState<MainRoomResponse | null>(null);
   const [inviteForm, setInviteForm] = useState<CreateInviteForm>(initialInviteForm);
   const [redeemForm, setRedeemForm] = useState<RedeemInviteForm>(initialRedeemForm);
-  const [verifyForm, setVerifyForm] = useState<VerifyForm>(initialVerifyForm);
   const [createdInvite, setCreatedInvite] = useState<InviteRecord | null>(null);
   const [pendingDevice, setPendingDevice] = useState<DeviceRecord | null>(null);
   const [statusMessage, setStatusMessage] = useState("Connecting");
@@ -208,7 +195,6 @@ function App() {
   const [vaultUnlocked, setVaultUnlocked] = useState(false);
   const [vaultStatus, setVaultStatus] = useState(hasStoredDraftVault() ? "Draft vault locked" : "No saved drafts yet");
   const [draftComposer, setDraftComposer] = useState<DraftComposerState>(initialDraftComposer);
-  const [roomSecret, setRoomSecret] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [activeTheme, setActiveTheme] = useState<UiThemeId>("emerald-static");
   const [cipherEnvelopes, setCipherEnvelopes] = useState<MessageEnvelope[]>([]);
@@ -216,7 +202,6 @@ function App() {
   const [messageStatus, setMessageStatus] = useState("Enter the room key to read messages");
   const [dmState, setDmState] = useState<DirectMessageState>({
     recipientId: "",
-    secret: "",
     body: "",
     status: "Choose a member to start chatting",
     envelopes: [],
@@ -237,10 +222,10 @@ function App() {
           await ensureBootstrapSession();
         } else {
           setStatusMessage("Invite required");
-          setMessageStatus("Join with an invite to sync messages");
+          setMessageStatus("Join the circle to start chatting");
         }
       } else {
-        await refreshMessages(roomSecret);
+        await refreshMessages();
       }
 
       const elapsed = Date.now() - startedAt;
@@ -258,6 +243,14 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!sessionReady || !dmState.recipientId) {
+      return;
+    }
+
+    void refreshDirectMessages(dmState.recipientId);
+  }, [dmState.recipientId, sessionReady]);
+
   async function ensureBootstrapSession() {
     try {
       const result = await bootstrapSession();
@@ -265,9 +258,9 @@ function App() {
       setSessionReady(true);
       setStatusMessage("Connected");
       setErrorMessage("");
-      await refreshMessages(roomSecret);
+      await refreshMessages();
       if (dmState.recipientId) {
-        await refreshDirectMessages(dmState.recipientId, dmState.secret);
+        await refreshDirectMessages(dmState.recipientId);
       }
     } catch (error) {
       setErrorMessage(import.meta.env.DEV ? toMessage(error) : "");
@@ -285,9 +278,9 @@ function App() {
     }
   }
 
-  async function refreshMessages(secret: string) {
+  async function refreshMessages() {
     if (!getSessionToken()) {
-      setMessageStatus("Sign in to sync messages");
+      setMessageStatus("Join the circle to start chatting");
       return;
     }
 
@@ -295,17 +288,11 @@ function App() {
       const result = await fetchEnvelopes("room_main");
       setCipherEnvelopes(result.items);
 
-      if (!secret) {
-        setRoomMessages([]);
-        setMessageStatus("Enter the room key to read messages");
-        return;
-      }
-
       const decrypted = await Promise.all(
         result.items.map(async (item) => ({
           envelopeId: item.id,
           senderDeviceId: item.senderDeviceId,
-          body: await decryptRoomMessage(secret, item.ciphertext),
+          body: await decryptRoomMessage(DEFAULT_ROOM_SECRET, item.ciphertext),
           sentAt: item.sentAt,
           expiresAt: item.expiresAt
         }))
@@ -319,7 +306,7 @@ function App() {
     }
   }
 
-  async function refreshDirectMessages(recipientId: string, secret: string) {
+  async function refreshDirectMessages(recipientId: string) {
     if (!recipientId) {
       setDmState((current) => ({
         ...current,
@@ -333,7 +320,7 @@ function App() {
     if (!getSessionToken()) {
       setDmState((current) => ({
         ...current,
-        status: "Sign in to sync messages"
+        status: "Join the circle to start chatting"
       }));
       return;
     }
@@ -341,21 +328,11 @@ function App() {
     try {
       const result = await fetchEnvelopes(getDirectRoomId(recipientId));
 
-      if (!secret) {
-        setDmState((current) => ({
-          ...current,
-          envelopes: result.items,
-          messages: [],
-          status: "Enter the direct message key to read messages"
-        }));
-        return;
-      }
-
       const decrypted = await Promise.all(
         result.items.map(async (item) => ({
           envelopeId: item.id,
           senderDeviceId: item.senderDeviceId,
-          body: await decryptRoomMessage(secret, item.ciphertext),
+          body: await decryptRoomMessage(getDirectSecret(recipientId), item.ciphertext),
           sentAt: item.sentAt,
           expiresAt: item.expiresAt
         }))
@@ -419,7 +396,7 @@ function App() {
             id: deviceId,
             memberId,
             label: redeemForm.deviceLabel,
-            verificationMethod: redeemForm.verificationMethod,
+            verificationMethod: "code",
             publicKey: identity.publicKey,
             verifiedAt: null,
             revokedAt: null
@@ -429,41 +406,14 @@ function App() {
         setSessionToken(result.auth.token);
         setSessionReady(true);
         setPendingDevice(result.device);
-        setVerifyForm({
-          method: result.device.verificationMethod,
-          proof: "room-seal-001"
-        });
         setStatusMessage(`${result.member.displayName} joined`);
         setErrorMessage("");
         await refreshRoom();
-        await refreshMessages(roomSecret);
+        await refreshMessages();
         if (dmState.recipientId) {
-          await refreshDirectMessages(dmState.recipientId, dmState.secret);
+          await refreshDirectMessages(dmState.recipientId);
         }
-      } catch (error) {
-        setErrorMessage(toMessage(error));
-      }
-    });
-  }
-
-  function handleVerifySubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    startTransition(async () => {
-      try {
-        if (!pendingDevice) {
-          throw new Error("Join the circle on this device before verification.");
-        }
-
-        const signature = await signDeviceProof(pendingDevice.id, verifyForm.proof);
-        const result = await verifyDevice({
-          deviceId: pendingDevice.id,
-          method: verifyForm.method,
-          proof: verifyForm.proof,
-          signature
-        });
-        setStatusMessage(`Device verified ${formatTimestamp(result.event.createdAt)}`);
-        setErrorMessage("");
-        await refreshRoom();
+        setView("room");
       } catch (error) {
         setErrorMessage(toMessage(error));
       }
@@ -511,33 +461,15 @@ function App() {
     });
   }
 
-  function handleRoomUnlock(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    startTransition(async () => {
-      await refreshMessages(roomSecret);
-    });
-  }
-
-  function handleDirectUnlock(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    startTransition(async () => {
-      await refreshDirectMessages(dmState.recipientId, dmState.secret);
-    });
-  }
-
   function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
       try {
-        if (!roomSecret) {
-          throw new Error("Enter the room key before sending.");
-        }
-
         if (!getSessionToken()) {
           throw new Error("You need an active session to send messages.");
         }
 
-        const ciphertext = await encryptRoomMessage(roomSecret, messageBody);
+        const ciphertext = await encryptRoomMessage(DEFAULT_ROOM_SECRET, messageBody);
         await sendEnvelope({
           id: `env_${crypto.randomUUID()}`,
           roomId: "room_main",
@@ -548,7 +480,7 @@ function App() {
 
         setMessageBody("");
         setMessageStatus("Message sent");
-        await refreshMessages(roomSecret);
+        await refreshMessages();
       } catch (error) {
         setMessageStatus(toMessage(error));
       }
@@ -563,15 +495,11 @@ function App() {
           throw new Error("Choose who you want to message.");
         }
 
-        if (!dmState.secret) {
-          throw new Error("Enter the direct message key before sending.");
-        }
-
         if (!getSessionToken()) {
           throw new Error("You need an active session to send messages.");
         }
 
-        const ciphertext = await encryptRoomMessage(dmState.secret, dmState.body);
+        const ciphertext = await encryptRoomMessage(getDirectSecret(dmState.recipientId), dmState.body);
         await sendEnvelope({
           id: `env_${crypto.randomUUID()}`,
           roomId: getDirectRoomId(dmState.recipientId),
@@ -585,7 +513,7 @@ function App() {
           body: "",
           status: "Message sent"
         }));
-        await refreshDirectMessages(dmState.recipientId, dmState.secret);
+        await refreshDirectMessages(dmState.recipientId);
       } catch (error) {
         setDmState((current) => ({
           ...current,
@@ -727,8 +655,8 @@ function App() {
                 {[
                   "Create or receive an invite.",
                   "Join the circle on this device.",
-                  "Verify this device with a secure code or QR flow.",
-                  "Unlock the room or a direct chat with the shared key.",
+                  "Open chat immediately once you are inside the circle.",
+                  "Use the main room or start a direct message without extra setup.",
                   "Read messages in the main timeline and send from the composer at the bottom.",
                   "Use Settings for invites, saved drafts, and device status."
                 ].map((step, index) => (
@@ -777,28 +705,18 @@ function App() {
               <div className="grid gap-4">
                 <SectionHeader
                   title="2. Open the chat"
-                  subtitle="Enter the room key, then go straight to the conversation."
+                  subtitle="Join the circle and move straight into the room."
                 />
-                <form className="grid gap-3" onSubmit={handleRoomUnlock}>
-                  <Field label="Room key">
-                    <input
-                      className="sy-input"
-                      type="password"
-                      value={roomSecret}
-                      onChange={(event) => setRoomSecret(event.target.value)}
-                    />
-                  </Field>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <ActionButton pending={isPending} label="Open chat" pendingLabel="Opening..." />
-                    <CyberButton label="Go to chat" onClick={() => setView("room")} type="button" />
-                  </div>
-                </form>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ActionCard title="Open chat" description="Go to the shared conversation." onClick={() => setView("room")} />
+                  <ActionCard title="Open settings" description="Create invites and manage your space." onClick={() => setView("security")} />
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <ActionCard title="Open chat" description="Go to the shared conversation." onClick={() => setView("room")} />
                 <ActionCard title="Open direct messages" description="Start a private conversation." onClick={() => setView("direct")} />
-                <ActionCard title="Open settings" description="Manage invites and devices." onClick={() => setView("security")} />
+                <ActionCard title="Your profile" description="See who is in the circle." onClick={() => setView("identity")} />
+                <ActionCard title="Open settings" description="Manage invites and drafts." onClick={() => setView("security")} />
               </div>
             </div>
           </CalmPanel>
@@ -828,18 +746,14 @@ function App() {
               </div>
             </CalmPanel>
 
-            <CalmPanel title="Chat settings" subtitle="Unlock and sync">
-              <form className="grid gap-3" onSubmit={handleRoomUnlock}>
-                <Field label="Room key">
-                  <input
-                    className="sy-input"
-                    type="password"
-                    value={roomSecret}
-                    onChange={(event) => setRoomSecret(event.target.value)}
-                  />
-                </Field>
-                <ActionButton pending={isPending} label="Open chat" pendingLabel="Opening..." />
-              </form>
+            <CalmPanel title="Chat status" subtitle="Ready when you are">
+              <div className="grid gap-3">
+                <StatusCard
+                  title="Access"
+                  value={sessionReady ? "Joined circle" : "Invite required"}
+                />
+                <StatusCard title="Room" value={room?.room.title ?? "Main room"} />
+              </div>
             </CalmPanel>
 
             <CalmPanel title="Chat details" subtitle="Quick view">
@@ -931,22 +845,10 @@ function App() {
                       ))}
                   </select>
                 </Field>
-                <Field label="Direct message key">
-                  <input
-                    className="sy-input"
-                    type="password"
-                    value={dmState.secret}
-                    onChange={(event) =>
-                      setDmState((current) => ({
-                        ...current,
-                        secret: event.target.value
-                      }))
-                    }
-                  />
-                </Field>
-                <form className="grid gap-3" onSubmit={handleDirectUnlock}>
-                  <ActionButton pending={isPending} label="Open messages" pendingLabel="Opening..." />
-                </form>
+                <StatusCard
+                  title="Access"
+                  value={dmState.recipientId ? "Conversation ready" : "Choose a member"}
+                />
               </div>
             </CalmPanel>
 
@@ -1121,50 +1023,59 @@ function App() {
                       }
                     />
                   </Field>
+                  <Field label="This device name">
+                    <input
+                      className="sy-input"
+                      value={redeemForm.deviceLabel}
+                      onChange={(event) =>
+                        setRedeemForm((current) => ({ ...current, deviceLabel: event.target.value }))
+                      }
+                    />
+                  </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="This device name">
-                      <input
-                        className="sy-input"
-                        value={redeemForm.deviceLabel}
-                        onChange={(event) =>
-                          setRedeemForm((current) => ({ ...current, deviceLabel: event.target.value }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Verification method">
+                    <Field label="Profile style">
                       <select
                         className="sy-input"
-                        value={redeemForm.verificationMethod}
+                        value={redeemForm.layout}
                         onChange={(event) =>
                           setRedeemForm((current) => ({
                             ...current,
-                            verificationMethod: event.target.value as RedeemInviteForm["verificationMethod"]
+                            layout: event.target.value as RedeemInviteForm["layout"]
                           }))
                         }
                       >
-                        <option value="qr">QR</option>
-                        <option value="code">Secure code</option>
+                        <option value="constellation">Constellation</option>
+                        <option value="archive">Archive</option>
+                        <option value="signal">Signal</option>
+                      </select>
+                    </Field>
+                    <Field label="Accent">
+                      <select
+                        className="sy-input"
+                        value={redeemForm.accent}
+                        onChange={(event) =>
+                          setRedeemForm((current) => ({
+                            ...current,
+                            accent: event.target.value as PersonalizationPresetId
+                          }))
+                        }
+                      >
+                        <option value="sea-glow">Sea Glow</option>
+                        <option value="ember-signal">Ember Signal</option>
+                        <option value="moon-glass">Moon Glass</option>
                       </select>
                     </Field>
                   </div>
                   <ActionButton pending={isPending} label="Join circle" pendingLabel="Joining..." />
                 </form>
 
-                <form className="grid gap-3" onSubmit={handleVerifySubmit}>
+                <div className="grid gap-3">
                   <ResultBlock
                     title="Current device"
-                    body={pendingDevice?.label ?? "Join the circle on this device to continue"}
-                    meta={pendingDevice ? "Ready for verification" : "No device joined yet"}
+                    body={pendingDevice?.label ?? "No device joined on this browser yet"}
+                    meta={pendingDevice ? "Chat access is active on this device" : "Join with an invite to activate chat"}
                   />
-                  <Field label="Verification code">
-                    <input
-                      className="sy-input"
-                      value={verifyForm.proof}
-                      onChange={(event) => setVerifyForm((current) => ({ ...current, proof: event.target.value }))}
-                    />
-                  </Field>
-                  <ActionButton pending={isPending} label="Verify this device" pendingLabel="Signing..." />
-                </form>
+                </div>
               </div>
             </div>
           </CalmPanel>
@@ -1412,6 +1323,10 @@ function resolveSenderLabel(senderDeviceId: string, pendingDevice: DeviceRecord 
   }
 
   return "Circle member";
+}
+
+function getDirectSecret(recipientId: string) {
+  return `sy-ph3r-dm-${recipientId}`;
 }
 
 function createHandle(displayName: string) {
