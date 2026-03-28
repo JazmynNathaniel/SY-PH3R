@@ -42,14 +42,12 @@ import {
 
 type CreateInviteForm = {
   label: string;
-  createdByMemberId: string;
   expiresAt: string;
 };
 
 type RedeemInviteForm = {
   code: string;
   displayName: string;
-  handle: string;
   accent: PersonalizationPresetId;
   layout: "constellation" | "archive" | "signal";
   deviceLabel: string;
@@ -57,7 +55,6 @@ type RedeemInviteForm = {
 };
 
 type VerifyForm = {
-  deviceId: string;
   method: "qr" | "code";
   proof: string;
 };
@@ -107,14 +104,12 @@ type UiThemeId =
 
 const initialInviteForm: CreateInviteForm = {
   label: "Member slot 02",
-  createdByMemberId: "member_iris",
   expiresAt: getDefaultExpiry()
 };
 
 const initialRedeemForm: RedeemInviteForm = {
   code: "",
   displayName: "",
-  handle: "",
   accent: "sea-glow",
   layout: "constellation",
   deviceLabel: "New device",
@@ -122,7 +117,6 @@ const initialRedeemForm: RedeemInviteForm = {
 };
 
 const initialVerifyForm: VerifyForm = {
-  deviceId: "",
   method: "qr",
   proof: "room-seal-001"
 };
@@ -388,7 +382,6 @@ function App() {
       try {
         const invite = await createInvite({
           code: `invite_${crypto.randomUUID()}`,
-          createdByMemberId: inviteForm.createdByMemberId,
           expiresAt: new Date(inviteForm.expiresAt).toISOString(),
           label: inviteForm.label
         });
@@ -407,6 +400,7 @@ function App() {
     event.preventDefault();
     startTransition(async () => {
       try {
+        const handle = createHandle(redeemForm.displayName);
         const memberId = `member_${crypto.randomUUID()}`;
         const deviceId = `device_${crypto.randomUUID()}`;
         const identity = await createDeviceIdentity(deviceId);
@@ -415,7 +409,7 @@ function App() {
           member: {
             id: memberId,
             displayName: redeemForm.displayName,
-            handle: redeemForm.handle,
+            handle,
             accent: redeemForm.accent,
             layout: redeemForm.layout,
             photoUrl: "",
@@ -436,7 +430,6 @@ function App() {
         setSessionReady(true);
         setPendingDevice(result.device);
         setVerifyForm({
-          deviceId: result.device.id,
           method: result.device.verificationMethod,
           proof: "room-seal-001"
         });
@@ -457,9 +450,15 @@ function App() {
     event.preventDefault();
     startTransition(async () => {
       try {
-        const signature = await signDeviceProof(verifyForm.deviceId, verifyForm.proof);
+        if (!pendingDevice) {
+          throw new Error("Join the circle on this device before verification.");
+        }
+
+        const signature = await signDeviceProof(pendingDevice.id, verifyForm.proof);
         const result = await verifyDevice({
-          ...verifyForm,
+          deviceId: pendingDevice.id,
+          method: verifyForm.method,
+          proof: verifyForm.proof,
           signature
         });
         setStatusMessage(`Device verified ${formatTimestamp(result.event.createdAt)}`);
@@ -538,12 +537,10 @@ function App() {
           throw new Error("You need an active session to send messages.");
         }
 
-        const senderDeviceId = pendingDevice?.id ?? "device_iris_studio";
         const ciphertext = await encryptRoomMessage(roomSecret, messageBody);
         await sendEnvelope({
           id: `env_${crypto.randomUUID()}`,
           roomId: "room_main",
-          senderDeviceId,
           ciphertext,
           sentAt: new Date().toISOString(),
           expiresAt: draftComposer.disappearingWindow === "off" ? null : draftComposer.disappearingWindow
@@ -574,12 +571,10 @@ function App() {
           throw new Error("You need an active session to send messages.");
         }
 
-        const senderDeviceId = pendingDevice?.id ?? "device_iris_studio";
         const ciphertext = await encryptRoomMessage(dmState.secret, dmState.body);
         await sendEnvelope({
           id: `env_${crypto.randomUUID()}`,
           roomId: getDirectRoomId(dmState.recipientId),
-          senderDeviceId,
           ciphertext,
           sentAt: new Date().toISOString(),
           expiresAt: null
@@ -625,7 +620,7 @@ function App() {
               <SecurityStatusBadge label={statusMessage} tone="secure" />
             </div>
             <div className="flex flex-wrap gap-3">
-              <SecurityStatusBadge label={sessionReady ? "session ready" : "session pending"} tone="active" />
+              <SecurityStatusBadge label={sessionReady ? "ready to chat" : "join required"} tone="active" />
               <SecurityStatusBadge label={`${memberCount}/5 members`} tone="alert" />
               <SecurityStatusBadge label={vaultUnlocked ? "vault unlocked" : "vault locked"} tone="active" />
             </div>
@@ -741,25 +736,14 @@ function App() {
                       onChange={(event) => setInviteForm((current) => ({ ...current, label: event.target.value }))}
                     />
                   </Field>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Created by member ID">
-                      <input
-                        className="sy-input"
-                        value={inviteForm.createdByMemberId}
-                        onChange={(event) =>
-                          setInviteForm((current) => ({ ...current, createdByMemberId: event.target.value }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Expiry">
-                      <input
-                        className="sy-input"
-                        type="datetime-local"
-                        value={inviteForm.expiresAt}
-                        onChange={(event) => setInviteForm((current) => ({ ...current, expiresAt: event.target.value }))}
-                      />
-                    </Field>
-                  </div>
+                  <Field label="Expiry">
+                    <input
+                      className="sy-input"
+                      type="datetime-local"
+                      value={inviteForm.expiresAt}
+                      onChange={(event) => setInviteForm((current) => ({ ...current, expiresAt: event.target.value }))}
+                    />
+                  </Field>
                   <ActionButton pending={isPending} label="Create invite" pendingLabel="Creating..." />
                 </form>
                 {createdInvite ? (
@@ -872,7 +856,7 @@ function App() {
                     roomMessages.map((message, index) => (
                       <MessageItem
                         key={message.envelopeId}
-                        sender={message.senderDeviceId}
+                        sender={resolveSenderLabel(message.senderDeviceId, pendingDevice)}
                         meta={`${formatTimestamp(message.sentAt)} - ${message.expiresAt ?? "Saved"}`}
                         body={message.body}
                         active={index === 0}
@@ -986,7 +970,7 @@ function App() {
                     dmState.messages.map((message, index) => (
                       <MessageItem
                         key={message.envelopeId}
-                        sender={message.senderDeviceId}
+                        sender={resolveSenderLabel(message.senderDeviceId, pendingDevice)}
                         meta={`${formatTimestamp(message.sentAt)} - Direct message`}
                         body={message.body}
                         active={index === 0}
@@ -1085,15 +1069,6 @@ function App() {
                       onChange={(event) => setInviteForm((current) => ({ ...current, label: event.target.value }))}
                     />
                   </Field>
-                  <Field label="Created by member ID">
-                    <input
-                      className="sy-input"
-                      value={inviteForm.createdByMemberId}
-                      onChange={(event) =>
-                        setInviteForm((current) => ({ ...current, createdByMemberId: event.target.value }))
-                      }
-                    />
-                  </Field>
                   <Field label="Expiry">
                     <input
                       className="sy-input"
@@ -1118,26 +1093,17 @@ function App() {
                       onChange={(event) => setRedeemForm((current) => ({ ...current, code: event.target.value }))}
                     />
                   </Field>
+                  <Field label="Display name">
+                    <input
+                      className="sy-input"
+                      value={redeemForm.displayName}
+                      onChange={(event) =>
+                        setRedeemForm((current) => ({ ...current, displayName: event.target.value }))
+                      }
+                    />
+                  </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Display name">
-                      <input
-                        className="sy-input"
-                        value={redeemForm.displayName}
-                        onChange={(event) =>
-                          setRedeemForm((current) => ({ ...current, displayName: event.target.value }))
-                        }
-                      />
-                    </Field>
-                    <Field label="Handle">
-                      <input
-                        className="sy-input"
-                        value={redeemForm.handle}
-                        onChange={(event) => setRedeemForm((current) => ({ ...current, handle: event.target.value }))}
-                      />
-                    </Field>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Device name">
+                    <Field label="This device name">
                       <input
                         className="sy-input"
                         value={redeemForm.deviceLabel}
@@ -1162,17 +1128,15 @@ function App() {
                       </select>
                     </Field>
                   </div>
-                  <ActionButton pending={isPending} label="Redeem invite" pendingLabel="Joining..." />
+                  <ActionButton pending={isPending} label="Join circle" pendingLabel="Joining..." />
                 </form>
 
                 <form className="grid gap-3" onSubmit={handleVerifySubmit}>
-                  <Field label="Device ID">
-                    <input
-                      className="sy-input sy-code-text"
-                      value={verifyForm.deviceId}
-                      onChange={(event) => setVerifyForm((current) => ({ ...current, deviceId: event.target.value }))}
-                    />
-                  </Field>
+                  <ResultBlock
+                    title="Current device"
+                    body={pendingDevice?.label ?? "Join the circle on this device to continue"}
+                    meta={pendingDevice ? "Ready for verification" : "No device joined yet"}
+                  />
                   <Field label="Verification code">
                     <input
                       className="sy-input"
@@ -1180,7 +1144,7 @@ function App() {
                       onChange={(event) => setVerifyForm((current) => ({ ...current, proof: event.target.value }))}
                     />
                   </Field>
-                  <ActionButton pending={isPending} label="Verify device" pendingLabel="Signing..." />
+                  <ActionButton pending={isPending} label="Verify this device" pendingLabel="Signing..." />
                 </form>
               </div>
             </div>
@@ -1417,6 +1381,28 @@ function getDirectRoomId(recipientId: string) {
 
 function resolveMemberName(members: MemberProfile[], recipientId: string) {
   return members.find((member) => member.id === recipientId)?.displayName ?? recipientId;
+}
+
+function resolveSenderLabel(senderDeviceId: string, pendingDevice: DeviceRecord | null) {
+  if (pendingDevice && senderDeviceId === pendingDevice.id) {
+    return "You";
+  }
+
+  if (senderDeviceId === "device_iris_studio") {
+    return "Iris";
+  }
+
+  return "Circle member";
+}
+
+function createHandle(displayName: string) {
+  const normalized = displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24);
+
+  return normalized || `member_${crypto.randomUUID().slice(0, 8)}`;
 }
 
 export default App;

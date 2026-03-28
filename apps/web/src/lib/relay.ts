@@ -1,5 +1,6 @@
 import type {
   CreateInviteInput,
+  CreateMessageEnvelopeInput,
   DeviceRecord,
   InviteRecord,
   MessageEnvelope,
@@ -71,7 +72,7 @@ export async function verifyDevice(payload: {
   });
 }
 
-export async function sendEnvelope(payload: MessageEnvelope) {
+export async function sendEnvelope(payload: CreateMessageEnvelopeInput) {
   const result = await request<{ envelope: MessageEnvelope }>("/v1/messages/envelopes", {
     method: "POST",
     body: JSON.stringify(payload),

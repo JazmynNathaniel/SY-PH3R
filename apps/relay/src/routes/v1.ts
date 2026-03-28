@@ -2,10 +2,10 @@ import type { FastifyPluginAsync } from "fastify";
 import { createPublicKey, verify } from "node:crypto";
 import {
   createInviteSchema,
+  createMessageEnvelopeSchema,
   deviceVerificationSchema,
   envelopeQuerySchema,
   inviteRedeemSchema,
-  messageEnvelopeSchema,
   revokeSessionSchema
 } from "@sy-ph3r/shared";
 import type { RelayStorage } from "../domain/storage";
@@ -57,8 +57,14 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
   });
 
   app.post("/v1/invites", { preHandler: requireSession }, async (request, reply) => {
+    const session = getSessionFromRequest(storage, request.headers.authorization);
+    const device = session ? storage.getDevice(session.deviceId) : null;
+    if (!device) {
+      return reply.code(401).send({ error: "Valid device session required." });
+    }
+
     const payload = createInviteSchema.parse(request.body);
-    const created = storage.createInvite(payload);
+    const created = storage.createInvite(payload, device.memberId);
 
     return reply.code(201).send({
       invite: created,
@@ -122,8 +128,13 @@ export const v1Routes: FastifyPluginAsync<RouteOptions> = async (app, options) =
   }));
 
   app.post("/v1/messages/envelopes", { preHandler: requireSession }, async (request, reply) => {
-    const payload = messageEnvelopeSchema.parse(request.body);
-    const stored = storage.upsertEnvelope(payload);
+    const session = getSessionFromRequest(storage, request.headers.authorization);
+    if (!session) {
+      return reply.code(401).send({ error: "Valid device session required." });
+    }
+
+    const payload = createMessageEnvelopeSchema.parse(request.body);
+    const stored = storage.upsertEnvelope(payload, session.deviceId);
 
     return reply.code(202).send({
       envelope: stored,

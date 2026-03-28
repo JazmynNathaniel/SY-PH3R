@@ -40,12 +40,20 @@ export const messageEnvelopeSchema = z.object({
 
 export const createInviteSchema = z.object({
   code: z.string().min(8).max(128),
-  createdByMemberId: z.string().min(1),
   expiresAt: z.string().min(1),
   label: z.string().min(1).max(80)
 });
 
+export const createMessageEnvelopeSchema = z.object({
+  id: z.string().min(1),
+  roomId: z.string().min(1),
+  ciphertext: z.string().min(1),
+  sentAt: z.string().min(1),
+  expiresAt: z.string().nullable()
+});
+
 export const inviteRecordSchema = createInviteSchema.extend({
+  createdByMemberId: z.string().min(1),
   createdAt: z.string().min(1),
   redeemedAt: z.string().nullable(),
   redeemedByMemberId: z.string().nullable()

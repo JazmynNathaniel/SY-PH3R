@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { createHash, randomBytes } from "node:crypto";
 import type {
   CreateInviteInput,
+  CreateMessageEnvelopeInput,
   DeviceRecord,
   DeviceVerificationEvent,
   InviteRecord,
@@ -26,7 +27,7 @@ type RedeemInviteResult = {
 };
 
 export type RelayStorage = {
-  createInvite(input: CreateInviteInput): InviteRecord;
+  createInvite(input: CreateInviteInput, createdByMemberId: string): InviteRecord;
   redeemInvite(code: string, member: MemberProfile, device: DeviceRecord): RedeemInviteResult | null;
   getDevice(deviceId: string): DeviceRecord | null;
   verifyDevice(event: Omit<DeviceVerificationEvent, "id" | "createdAt">): DeviceVerificationEvent | null;
@@ -34,7 +35,7 @@ export type RelayStorage = {
   issueSession(deviceId: string): { session: SessionRecord; auth: SessionAuth } | null;
   listRoomMembers(): MemberProfile[];
   getMainRoom(): RoomRecord;
-  upsertEnvelope(envelope: MessageEnvelope): MessageEnvelope;
+  upsertEnvelope(input: CreateMessageEnvelopeInput, senderDeviceId: string): MessageEnvelope;
   getEnvelopes(roomId: string): MessageEnvelope[];
   revokeSession(sessionId: string): SessionRecord | null;
 };
@@ -238,9 +239,10 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
   );
 
   return {
-    createInvite(input) {
+    createInvite(input, createdByMemberId) {
       const invite: InviteRecord = {
         ...input,
+        createdByMemberId,
         createdAt: new Date().toISOString(),
         redeemedAt: null,
         redeemedByMemberId: null
@@ -289,7 +291,11 @@ export function createSqliteStorage(options: SqliteOptions): RelayStorage {
     getMainRoom() {
       return getMainRoomStatement.get() as RoomRecord;
     },
-    upsertEnvelope(envelope) {
+    upsertEnvelope(input, senderDeviceId) {
+      const envelope: MessageEnvelope = {
+        ...input,
+        senderDeviceId
+      };
       insertEnvelope.run(envelope);
       return envelope;
     },

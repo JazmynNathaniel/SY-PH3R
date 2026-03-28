@@ -43,12 +43,20 @@ export type MessageEnvelope = {
 
 export type CreateInviteInput = {
   code: string;
-  createdByMemberId: string;
   expiresAt: string;
   label: string;
 };
 
+export type CreateMessageEnvelopeInput = {
+  id: string;
+  roomId: string;
+  ciphertext: string;
+  sentAt: string;
+  expiresAt: string | null;
+};
+
 export type InviteRecord = CreateInviteInput & {
+  createdByMemberId: string;
   createdAt: string;
   redeemedAt: string | null;
   redeemedByMemberId: string | null;
